@@ -1,58 +1,4 @@
 # Construction Project Management Dashboard
-Data visualization dashboard for construction project management
-
-## Overview
-
-A dashboard designed to help small construction companies manage projects, schedules, locations, and resources through interactive data visualizations.
-
-## Features
-
-- **Project Timeline:** View project schedules and phases using a Gantt chart.
-- **Map Visualization:** View construction sites and resource locations.
-- **Resource Management:** Track workers, materials, tools, and availability.
-- **Adapt to Schedule Changes:** Identify overlapping schedules and resource conflicts.
-
-## Setup Instructions
-
-### 1. Install Dependencies
-
-Make sure you have [Node.js](https://nodejs.org/) installed, then run:
-```bash
-npm install
-```
-
-Replace `<REPOSITORY_URL>` with the repository's HTTPS URL.
-
-### 2. Install Dependencies
-
-Make sure you have [Node.js](https://nodejs.org/) installed, then run:
-
-```bash
-npm install
-```
-
-### 3. Start the React Application
-
-```bash
-npm start
-```
-
-Open http://localhost:3000 in your browser to view the application.
-
-*Note: These instructions assume the project uses Create React App.*
-
-## Development
-
-Before starting work, pull the latest changes:
-
-```bash
-git pull origin main
-```
-
-Create a separate branch for your changes and open a pull request when you're ready to merge them into the main branch.
-
-
-# Construction Project Management Dashboard
 
 ## Overview
 A React-based dashboard for visualizing construction project timelines, locations, and resources.
@@ -61,7 +7,6 @@ A React-based dashboard for visualizing construction project timelines, location
 - Project timeline visualization (Gantt chart)
 - Map visualization for construction sites and resources
 - Resource management and availability
-- Search and cross-filtering
 - Scheduling and conflict detection
 
 ## Setup Instructions
