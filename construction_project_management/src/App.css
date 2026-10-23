@@ -1,27 +1,140 @@
+/* Global styles shared by every component */
+:root {
+  --bg: #F4F5F7;
+  --panel: #FFFFFF;
+  --border: #E3E6EA;
+  --divider: #EEF0F3;
+  --ink: #0F172A;
+  --text: #1F2937;
+  --sub: #334155;
+  --muted: #5B6472;
+  --scroll-thumb: #CBD3DC;
 
-.App {
-  min-height: 100vh;
-  background-color: #ffffff;
-  color: #222222;
-  padding: 24px 32px;
+  --radius: 12px;
+  --gap-x: 16px;
+  --gap-y: 14px;
+  --page-x: 24px;
+
+  /* Panel sizes: the page scrolls, these are static */
+  --h-sites: 325px;
+  --h-add-min: 400px;
+  --h-timeline-chart: 260px;
+  --h-gantt-min: 445px; 
+
+  --lh-h2: 20px;
+  --lh-h3: 16px;
+
+  /* Offset of the timeline and the Gantt divider from the top of the resource panel */
+  --divider-offset: calc(
+    1px + 16px + var(--lh-h2) + 12px + var(--lh-h3) + 8px +
+    var(--h-timeline-chart) + 12px
+  );
+
+  --h-details: calc(var(--divider-offset) + 0.5px - var(--gap-y) / 2);
+  --font: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+/* Makes every element on the page measure its size including its padding and border */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-.App-header {
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 16px;
-}
-
-.App-header h1 {
+body {
   margin: 0;
-  font-size: 28px;
-  font-weight: 600;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.App-content {
-  text-align: left;
-  padding-top: 16px;
-  font-size: 16px;
-  color: #6b7280;
+.app {
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 16px var(--page-x) 40px;
+  display: grid;
+  grid-template-rows: auto auto;
+  row-gap: var(--gap-y);
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr) 300px;
+  column-gap: var(--gap-x);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-y);
+}
+
+.panel-resource { flex: 0 0 auto; }
+.panel-sites    { flex: 0 0 var(--h-sites); }
+.panel-details  { flex: 0 0 var(--h-details); }
+.panel-add      { flex: 1 0 var(--h-add-min); }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: var(--lh-h2);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.panel h3 {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  line-height: var(--lh-h3);
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.label-caps {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.chart-area,
+.panel-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.panel-body {
+  overflow-y: auto;
+}
+
+.panel-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+.panel-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel-body::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 2px;
 }

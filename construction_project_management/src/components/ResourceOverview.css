@@ -1,0 +1,26 @@
+.resource-sections {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-section,
+.gantt-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-section .chart-area {
+  flex: 0 0 var(--h-timeline-chart);
+}
+
+.section-divider {
+  flex: 0 0 1px;
+  background: var(--divider);
+  margin: 12px 0;
+}
+
+.gantt-section .chart-area {
+  flex: 0 0 auto;
+  min-height: var(--h-gantt-min);
+  overflow-x: auto;
+}
