@@ -1,6 +1,6 @@
 import './Header.css';
 import houseIcon from './house_icon.png';
-import calendarIcon from './calendar.png';
+import calendarIcon from './calendar_icon.png';
 
 function Header() {
   const today = new Date().toLocaleDateString('en-US', {
