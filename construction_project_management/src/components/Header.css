@@ -21,6 +21,24 @@
   justify-content: center;
 }
 
+/* The PNGs are black on transparent; the filter turns them white so they
+   show on the dark tiles. */
+.header-icon {
+  display: block;
+  flex: none;
+  filter: brightness(0) invert(1);
+}
+
+.logo-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.today-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .header h1 {
   margin: 0;
   font-size: 20px;
@@ -28,8 +46,9 @@
   color: var(--ink);
 }
 
+/* Grows past min-width if a long date needs more room. */
 .today-tile {
-  width: 180px;
+  min-width: 200px;
   height: 50px;
   background: var(--ink);
   border-radius: 10px;

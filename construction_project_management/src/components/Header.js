@@ -1,4 +1,6 @@
 import './Header.css';
+import houseIcon from './house_icon.png';
+import calendarIcon from './calendar.png';
 
 function Header() {
   const today = new Date().toLocaleDateString('en-US', {
@@ -12,13 +14,13 @@ function Header() {
     <header className="header">
       <div className="header-brand">
         <div className="logo-tile">
-          <svg className="header-icon logo-icon" aria-hidden="true" />
+          <img className="header-icon logo-icon" src={houseIcon} alt="" />
         </div>
         <h1>Construction Project Management Dashboard</h1>
       </div>
 
       <div className="today-tile">
-        <svg className="header-icon today-icon" aria-hidden="true" />
+        <img className="header-icon today-icon" src={calendarIcon} alt="" />
         <div className="today-text">
           <span className="today-label">Today</span>
           <span className="today-date">{today}</span>
