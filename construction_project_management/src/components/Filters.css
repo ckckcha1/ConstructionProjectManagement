@@ -1,4 +1,331 @@
+/* Height follows the grid row (set by the middle column), not the content,
+   so a long list scrolls inside .filters-body instead of stretching the page. */
+.panel.panel-filters {
+  height: 0;
+  min-height: 100%;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.panel-filters input,
+.panel-filters button {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.panel-filters input:focus-visible,
+.panel-filters button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.filters-muted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.filters-error {
+  margin: 0;
+  font-size: 12.5px;
+  color: #B42318;
+}
+
+/* ---- Search ---- */
+.filters-search {
+  position: relative;
+  flex: none;
+  margin-bottom: 16px;
+}
+
+.filters-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.filters-search input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px 0 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.filters-search input::placeholder {
+  color: var(--muted);
+}
+
+/* ---- Date range ---- */
+.filters-dates {
+  flex: none;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.filters-section-title {
+  margin-bottom: 8px;
+}
+
+.date-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.date-field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sub);
+}
+
+.date-field input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.quick-range {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.quick-button {
+  height: 30px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.quick-button:hover {
+  background: var(--bg);
+}
+
+.quick-button.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #FFFFFF;
+}
+
+.filters-summary {
+  margin-top: 10px;
+}
+
+/* ---- Scrolling groups ---- */
 .filters-body {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  padding: 12px 2px 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+.filters-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filters-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filters-body::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 2px;
+}
+
+.filter-group + .filter-group {
+  margin-top: 14px;
+}
+
+.filter-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.filter-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.filter-chevron {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 0.15s;
+}
+
+.filter-group-toggle[aria-expanded='false'] .filter-chevron {
+  transform: rotate(-45deg);
+}
+
+.count-pill {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--divider);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  color: var(--sub);
+}
+
+.filter-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.filter-group-sep {
+  font-size: 12px;
+  color: var(--scroll-thumb);
+}
+
+.text-button {
+  padding: 2px 3px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.panel-filters .text-button {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.panel-filters .text-button:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.text-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.filter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.filter-row:hover {
+  background: var(--bg);
+}
+
+.filter-row input {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
+.filter-row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.filter-row-name,
+.filter-row-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-row-name {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.filter-row-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.filter-empty {
+  padding: 6px 4px;
+}
+
+.panel-filters .show-more {
+  margin: 2px 0 0 2px;
+  font-weight: 500;
+  color: var(--sub);
+}
+
+/* ---- Footer ---- */
+.filters-footer {
+  flex: none;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.reset-button {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  background: var(--bg);
 }

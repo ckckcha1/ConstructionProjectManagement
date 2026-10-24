@@ -2,8 +2,8 @@ import './Header.css';
 import houseIcon from './house_icon.png';
 import calendarIcon from './calendar_icon.png';
 
-function Header() {
-  const today = new Date().toLocaleDateString('en-US', {
+function Header({ today: todayDate }) {
+  const today = todayDate.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
