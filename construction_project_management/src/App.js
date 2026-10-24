@@ -111,6 +111,7 @@ function App() {
           onReset={handleReset}
           loading={loading}
           error={error}
+          projectColorById={data?.projectColorById}
         />
 
         <div className="column column-middle">

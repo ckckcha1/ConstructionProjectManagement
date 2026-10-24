@@ -275,6 +275,18 @@
   cursor: pointer;
 }
 
+.filter-row.has-color input[type="checkbox"] {
+  accent-color: var(--item-color);
+}
+
+.filter-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--item-color);
+  flex: none;
+}
+
 .filter-row-text {
   display: flex;
   flex-direction: column;

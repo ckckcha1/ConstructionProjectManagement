@@ -24,6 +24,7 @@ const GROUPS = [
     noun: 'projects',
     label: (p) => p.name,
     meta: (p) => `${p.id}`,
+    color: (p, colors) => colors?.get(p.id),
     searchText: (p) => [p.name, p.description, p.id],
   },
   {
@@ -58,7 +59,7 @@ function SearchIcon() {
   );
 }
 
-function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, onSetGroup }) {
+function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, onSetGroup, colors}) {
   const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -113,21 +114,28 @@ function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, 
             </p>
           ) : (
             <ul className="filter-list">
-              {visible.map((item) => (
-                <li key={item.id}>
-                  <label className="filter-row">
-                    <input
-                      type="checkbox"
-                      checked={!excluded.has(item.id)}
-                      onChange={() => onToggle(group.type, item.id)}
-                    />
-                    <span className="filter-row-text">
-                      <span className="filter-row-name">{group.label(item)}</span>
-                      <span className="filter-row-meta">{group.meta(item)}</span>
-                    </span>
-                  </label>
-                </li>
-              ))}
+              {visible.map((item) => {
+                const color = group.color?.(item, colors);
+                return (
+                  <li key={item.id}>
+                    <label
+                      className={`filter-row${color ? ' has-color' : ''}`}
+                      style={color ? { '--item-color': color } : undefined}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!excluded.has(item.id)}
+                        onChange={() => onToggle(group.type, item.id)}
+                      />
+                      {color && <span className="filter-dot" aria-hidden="true" />}
+                      <span className="filter-row-text">
+                        <span className="filter-row-name">{group.label(item)}</span>
+                        <span className="filter-row-meta">{group.meta(item)}</span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -158,6 +166,7 @@ function Filters({
   onReset,
   loading,
   error,
+  projectColorById,
 }) {
   const { start, end } = dateRange;
   const query = searchQuery.trim().toLowerCase();
@@ -204,6 +213,7 @@ function Filters({
         searching={searching}
         onToggle={onToggle}
         onSetGroup={onSetGroup}
+        colors={projectColorById}
       />
     ));
   }
