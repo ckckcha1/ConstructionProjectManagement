@@ -6,7 +6,7 @@ import ResourceOverview from './components/ResourceOverview';
 import ProjectSites from './components/ProjectSites';
 import ProjectDetails from './components/ProjectDetails';
 import AddProject from './components/AddProject';
-import { DEMO_TODAY, addMonths, getResourcesInRange, loadData } from './data';
+import { DEMO_TODAY, addMonths, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
 
 const defaultRange = () => ({ start: DEMO_TODAY, end: addMonths(DEMO_TODAY, 2) });
 
@@ -27,6 +27,9 @@ function App() {
   const [dateRange, setDateRange] = useState(defaultRange);
   const [searchQuery, setSearchQuery] = useState('');
   const [excludedIds, setExcludedIds] = useState(emptyExclusions);
+  // TODO: ResourceOverview will call setSelectedProjectId when a project bar
+  // is clicked. Not wired up yet.
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +52,23 @@ function App() {
     () => getResourcesInRange(data, dateRange.start, dateRange.end),
     [data, dateRange]
   );
+
+  const summary = useMemo(() => getPeriodSummary(inRange), [inRange]);
+
+  const selectedProject = useMemo(
+    () =>
+      selectedProjectId == null
+        ? null
+        : inRange.projects.find((p) => p.id === selectedProjectId) ?? null,
+    [inRange, selectedProjectId]
+  );
+  const displayedProject = selectedProject ?? getDefaultProject(inRange);
+
+  // A range change that drops the selected project falls back to the default.
+  // Skipped until data loads, when inRange is empty for every project.
+  useEffect(() => {
+    if (data && selectedProjectId != null && !selectedProject) setSelectedProjectId(null);
+  }, [data, selectedProjectId, selectedProject]);
 
   const handleToggle = useCallback((type, id) => {
     setExcludedIds((prev) => {
@@ -76,7 +96,7 @@ function App() {
 
   return (
     <div className="app">
-      <Header today={DEMO_TODAY} />
+      <Header today={DEMO_TODAY} summary={summary} dateRange={dateRange} loading={loading} />
 
       <main className="app-body">
         <Filters
@@ -99,7 +119,13 @@ function App() {
         </div>
 
         <div className="column column-right">
-          <ProjectDetails />
+          <ProjectDetails
+            project={displayedProject}
+            isDefault={selectedProjectId == null}
+            data={data}
+            loading={loading}
+            error={error}
+          />
           <AddProject />
         </div>
       </main>

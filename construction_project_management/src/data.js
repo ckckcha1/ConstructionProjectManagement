@@ -32,6 +32,16 @@ const resourceTypeOf = (id) => {
 
 const byId = (rows) => new Map(rows.map((row) => [row.id, row]));
 
+// HARD CODED!!! color palette values 
+// for the project colors to be used in the dashboard
+const PROJECT_PALETTE = ['#76B7B2', '#59A14F', '#4E79A7', '#F28E2B', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F'];
+
+// Sorted IDs get palette colours in order, wrapping when there are more
+function buildProjectColors(projects) {
+  const ids = projects.map((p) => p.id).sort();
+  return new Map(ids.map((id, i) => [id, PROJECT_PALETTE[i % PROJECT_PALETTE.length]]));
+}
+
 export async function loadData() {
   const [rawProjects, rawPhases, rawAssignments, rawWorkers, rawTools, rawMaterials] =
     await Promise.all(
@@ -143,6 +153,9 @@ export async function loadData() {
     workersById,
     toolsById,
     materialsById,
+    // Every view (details, timeline, Gantt, map) must read colors from
+    // data.projectColorById so projects keep one color everywhere
+    projectColorById: buildProjectColors(projects),
   };
 }
 
@@ -224,4 +237,27 @@ export function getResourcesInRange(data, rangeStart, rangeEnd) {
     tools: collect(ids.tool, data.toolsById).sort(byText('description')),
     materials: collect(ids.material, data.materialsById).sort(byText('description')),
   };
+}
+
+// Counts for the KPI values in the heading
+// Depend on the date range ONLY, the filter checkboxes doesn't affect
+export function getPeriodSummary(inRange) {
+  const materialNames = new Set(
+    inRange.materials.map((m) => (m.name || '').trim().toLowerCase())
+  );
+  return {
+    projects: inRange.projects.length,
+    people: inRange.workers.length,
+    tools: inRange.tools.length,
+    materialTypes: materialNames.size,
+  };
+}
+
+// The in-range project that ends soonest
+export function getDefaultProject(inRange) {
+  if (!inRange.projects.length) return null;
+  return [...inRange.projects].sort(
+    (a, b) =>
+      a.endDate - b.endDate || a.startDate - b.startDate || a.id.localeCompare(b.id)
+  )[0];
 }

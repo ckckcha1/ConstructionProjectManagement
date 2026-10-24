@@ -1,8 +1,10 @@
 .header {
-  height: 50px;
+  min-height: 50px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 8px 16px;
 }
 
 .header-brand {
@@ -76,5 +78,70 @@
   font-size: 15px;
   font-weight: 600;
   color: #FFFFFF;
+  white-space: nowrap;
+}
+
+/* KPI tiles + Today tile. Wraps under the title on narrow windows instead
+   of overlapping it, so the header only grows past 50px when it has to. */
+.header-right {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.kpi-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.kpi-tile {
+  height: 50px;
+  min-width: 132px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kpi-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  background: #EEF2F7;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kpi-icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.kpi-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-value {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-label {
+  font-size: 11.5px;
+  color: var(--muted);
   white-space: nowrap;
 }

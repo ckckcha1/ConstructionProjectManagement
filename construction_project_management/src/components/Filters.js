@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './Filters.css';
-import searchIcon from './search_icon.png';
+import searchIcon from '../icons/search_icon.png';
 import { addMonths, formatDate, fromInputValue, toInputValue } from '../data';
 
 const QUICK_MONTHS = [1, 2, 3];
