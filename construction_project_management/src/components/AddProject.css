@@ -58,7 +58,7 @@
   font-weight: 600;
   color: #111827;
 }
-.ap-input:focus { outline: 2px solid #bfdbfe; border-color: #2563eb; }
+.ap-input.area { height: 56px; padding-top: 8px; resize: none; }
 .area { height: 56px; padding-top: 8px; resize: none; }
 .ap-row2 { display: flex; gap: 12px; }
 .ap-row2 > div { flex: 1; min-width: 0; }
