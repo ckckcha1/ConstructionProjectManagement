@@ -16,14 +16,44 @@ const apiUrl = (path) => `/api/${path}`;
 
 const byId = (rows) => new Map(rows.map((row) => [row.id, row]));
 
-// HARD CODED!!! color palette values 
-// for the project colors to be used in the dashboard
-const PROJECT_PALETTE = ['#76B7B2', '#59A14F', '#4E79A7', '#F28E2B', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F'];
+// Project colors are generated, one unique color per project, so new projects never repeat a color.
+// Hues are spread evenly around the HCL color wheel (perceptually even, unlike HSL).
+// Lightness cycles through these levels, so hues that sit close together still look different.
+const COLOR_LIGHTNESS = [52, 68, 38];
+const COLOR_CHROMA = 55;
+const COLOR_HUE_OFFSET = 20; // starts the wheel at a red-orange
 
-// Sorted IDs get palette colours in order, wrapping when there are more
+function generateColors(count) {
+  return d3.range(count).map((i) => {
+    const hue = (COLOR_HUE_OFFSET + (i * 360) / count) % 360;
+    const lightness = COLOR_LIGHTNESS[i % COLOR_LIGHTNESS.length];
+    // Lower the chroma until the color can be shown on screen (some hue/lightness pairs can't)
+    let chroma = COLOR_CHROMA;
+    let color = d3.hcl(hue, chroma, lightness);
+    while (!color.displayable() && chroma > 0) {
+      chroma -= 5;
+      color = d3.hcl(hue, chroma, lightness);
+    }
+    return color.formatHex();
+  });
+}
+
+const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+
+// Steps through the generated colors with a large stride, so projects next to
+// each other in ID order (and often in the charts) get far-apart hues
+function colorStride(count) {
+  let stride = Math.max(1, Math.round(count * 0.382));
+  while (gcd(stride, count) !== 1) stride += 1;
+  return stride;
+}
+
+// Sorted IDs, so a project keeps its color no matter how the views are filtered
 function buildProjectColors(projects) {
   const ids = projects.map((p) => p.id).sort();
-  return new Map(ids.map((id, i) => [id, PROJECT_PALETTE[i % PROJECT_PALETTE.length]]));
+  const colors = generateColors(ids.length);
+  const stride = colorStride(ids.length);
+  return new Map(ids.map((id, i) => [id, colors[(i * stride) % ids.length]]));
 }
 
 export async function loadData() {

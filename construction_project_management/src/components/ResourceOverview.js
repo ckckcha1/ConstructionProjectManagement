@@ -189,6 +189,19 @@ function ResourceOverview({
     [dateRange, availableWidth]
   );
 
+  // When the range changes, scroll both charts so today is in the middle of the view
+  // (if today is in the range and the range is wider than the view)
+  useLayoutEffect(() => {
+    const el = projectsScrollRef.current;
+    if (!el || !today || today < timeline.start || today >= timeline.stop) return;
+    const viewWidth = el.clientWidth - LABEL_WIDTH;
+    const left = Math.max(0, timeline.x(d3.timeDay.floor(today)) - viewWidth / 2);
+    el.scrollLeft = left;
+    if (resourcesScrollRef.current) resourcesScrollRef.current.scrollLeft = left;
+    // Only on a new range, not every re-render, so it doesn't undo the user's scrolling
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateRange.start, dateRange.end, timeline.dayWidth]);
+
   const { projectRows, resourceRows } = useMemo(
     () =>
       data

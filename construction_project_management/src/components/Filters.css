@@ -311,6 +311,11 @@
   color: var(--muted);
 }
 
+/* Project with no phases in the date range, so it isn't in the charts */
+.filter-row.is-outside .filter-row-name {
+  color: var(--muted);
+}
+
 .filter-empty {
   padding: 6px 4px;
 }

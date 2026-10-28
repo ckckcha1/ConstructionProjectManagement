@@ -8,7 +8,13 @@ import ProjectDetails from './components/ProjectDetails';
 import AddProject from './components/AddProject';
 import { DEMO_TODAY, addMonths, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
 
-const defaultRange = () => ({ start: DEMO_TODAY, end: addMonths(DEMO_TODAY, 2) });
+// 3 months with today near the middle (starts 1.5 months back).
+// end = addMonths(start, 3) so the "3 months" quick-range button shows as active.
+const defaultRange = () => {
+  const monthBack = addMonths(DEMO_TODAY, -1);
+  const start = new Date(monthBack.getFullYear(), monthBack.getMonth(), monthBack.getDate() - 15);
+  return { start, end: addMonths(start, 3) };
+};
 
 // Stores the UNCHECKED items, so anything new that appears when the range
 // changes starts out checked.
@@ -53,6 +59,15 @@ function App() {
   );
 
   const summary = useMemo(() => getPeriodSummary(inRange), [inRange]);
+
+  // The filter panel lists every project, not just the ones in the date range
+  const allProjects = useMemo(
+    () =>
+      data
+        ? [...data.projects].sort((a, b) => a.startDate - b.startDate || a.id.localeCompare(b.id))
+        : [],
+    [data]
+  );
 
   const selectedProject = useMemo(
     () =>
@@ -104,6 +119,7 @@ function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           inRange={inRange}
+          allProjects={allProjects}
           excludedIds={excludedIds}
           onToggle={handleToggle}
           onSetGroup={handleSetGroup}

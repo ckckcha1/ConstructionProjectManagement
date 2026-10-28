@@ -21,6 +21,16 @@ const TOOLTIP_WIDTH = 240;
 const DARK_TEXT = '#0F172A';
 
 const formatMonth = d3.timeFormat('%B %Y');
+const formatMonthShort = d3.timeFormat('%b');
+const MONTH_LABEL_PADDING = 16;
+
+// Full month name if it fits in the segment, else "Apr", else nothing
+function monthLabel(segment) {
+  const full = formatMonth(segment.from);
+  if (textWidth(full) + MONTH_LABEL_PADDING <= segment.width) return full;
+  const short = formatMonthShort(segment.from);
+  return textWidth(short) + MONTH_LABEL_PADDING <= segment.width ? short : '';
+}
 const formatWeek = d3.timeFormat('%d %b');
 
 // Shared x-axis for both charts. end is inclusive (the last day shown).
@@ -189,7 +199,7 @@ function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRe
             <div className="gantt-months">
               {months.map((m) => (
                 <div key={+m.from} className="gantt-month" style={{ width: m.width }}>
-                  <span>{formatMonth(m.from)}</span>
+                  <span>{monthLabel(m)}</span>
                 </div>
               ))}
             </div>
