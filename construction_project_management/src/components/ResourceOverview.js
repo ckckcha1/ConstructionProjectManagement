@@ -6,10 +6,25 @@ import { formatDate, overlaps } from '../data';
 
 const formatShort = d3.timeFormat('%b %-d');
 
+const quantityText = (quantity) => (quantity == null ? '—' : quantity.toLocaleString('en-US'));
+
+// details: extra tooltip lines about the resource itself, shown above the assignment lines
 const RESOURCE_GROUPS = [
-  { type: 'workers', title: 'People', label: (w) => w.name, meta: (w) => w.role },
-  { type: 'tools', title: 'Tools', label: (t) => t.description, meta: (t) => t.id },
-  { type: 'materials', title: 'Materials', label: (m) => m.description, meta: (m) => m.unit },
+  { type: 'workers', title: 'People', label: (w) => w.name, meta: (w) => w.role, details: () => [] },
+  {
+    type: 'tools',
+    title: 'Tools',
+    label: (t) => t.description,
+    meta: (t) => t.id,
+    details: (t) => [`Quantity: ${quantityText(t.quantity)}`],
+  },
+  {
+    type: 'materials',
+    title: 'Materials',
+    label: (m) => m.description,
+    meta: (m) => m.unit,
+    details: (m) => [`Quantity: ${quantityText(m.quantity)} · Unit: ${m.unit || '—'}`],
+  },
 ];
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -110,7 +125,11 @@ function buildRows({ data, inRange, excludedIds, dateRange, collapsedGroups, onS
             label: project.id,
             tooltip: {
               title: group.label(resource),
-              lines: [`${project.id} ${project.name} · Phase ${phase.phaseNumber}`, phaseDates(phase)],
+              lines: [
+                ...group.details(resource),
+                `${project.id} ${project.name} · Phase ${phase.phaseNumber}`,
+                phaseDates(phase),
+              ],
             },
             onClick: () => onSelectProject(project.id),
           };
