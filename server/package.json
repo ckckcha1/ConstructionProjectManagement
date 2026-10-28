@@ -1,0 +1,22 @@
+{
+  "name": "construction_project_management_server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Express + PostgreSQL backend for the Construction Project Management Dashboard",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "db:setup": "node db/setup.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "csv-parse": "^7.0.3",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
