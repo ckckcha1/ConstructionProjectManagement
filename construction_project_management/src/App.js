@@ -27,8 +27,7 @@ function App() {
   const [dateRange, setDateRange] = useState(defaultRange);
   const [searchQuery, setSearchQuery] = useState('');
   const [excludedIds, setExcludedIds] = useState(emptyExclusions);
-  // TODO: ResourceOverview will call setSelectedProjectId when a project bar
-  // is clicked. Not wired up yet.
+  // Set by clicking a project row or bar in ResourceOverview
   const [selectedProjectId, setSelectedProjectId] = useState(null);
 
   useEffect(() => {
@@ -115,7 +114,17 @@ function App() {
         />
 
         <div className="column column-middle">
-          <ResourceOverview />
+          <ResourceOverview
+            data={data}
+            inRange={inRange}
+            excludedIds={excludedIds}
+            dateRange={dateRange}
+            today={DEMO_TODAY}
+            loading={loading}
+            error={error}
+            selectedProjectId={displayedProject?.id ?? null}
+            onSelectProject={setSelectedProjectId}
+          />
           <ProjectSites />
         </div>
 
