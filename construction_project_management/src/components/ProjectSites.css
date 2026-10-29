@@ -1,0 +1,234 @@
+.panel-sites {
+  --sites-map-height: 260px;
+  min-width: 0;
+  overflow: hidden;
+  padding-top: 10px;
+}
+
+.panel-sites h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #182033;
+}
+
+/* Main layout: map on the left, locations on the right */
+.sites-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 205px;
+  gap: 16px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+/* Map container */
+.sites-map {
+  position: relative;
+  width: 100%;
+  height: var(--sites-map-height);
+  min-width: 0;
+  min-height: 180px;
+  background: #d1e9f9;
+  overflow: hidden;
+  border-radius: 6px;
+  /* Contains Leaflet's internal z-indexes so the map can't float over
+     dropdowns, modals, or sticky headers elsewhere in the dashboard. */
+  isolation: isolate;
+  z-index: 0;
+}
+
+/* Leaflet fills the map box */
+.sites-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Project markers (HTML pins) */
+.project-pin-wrapper {
+  background: none;
+  border: none;
+  border-radius: 50%;
+}
+
+.project-pin-wrapper:focus-visible {
+  outline: 2px solid #4e79a7;
+  outline-offset: 2px;
+}
+
+.project-pin {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 2px;
+  box-sizing: border-box;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.project-pin-wrapper:hover .project-pin:not(.project-pin-selected),
+.project-pin-wrapper:focus-visible .project-pin:not(.project-pin-selected) {
+  transform: scale(1.2);
+}
+
+.project-pin.project-pin-selected {
+  transform: scale(1.4);
+  border-color: #182033;
+}
+
+/* Project labels (Leaflet tooltips, restyled as plain text with a halo) */
+.leaflet-tooltip.project-label {
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #182033;
+  text-shadow:
+    -1px -1px 0 #fff, 1px -1px 0 #fff,
+    -1px 1px 0 #fff, 1px 1px 0 #fff,
+    0 0 3px #fff;
+  pointer-events: none;
+}
+
+.leaflet-tooltip-right.project-label::before {
+  display: none;
+}
+
+/* Locations panel */
+.sites-list {
+  min-width: 0;
+  min-height: 0;
+  max-height: var(--sites-map-height);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sites-list h3 {
+  margin: 0 0 2px;
+  color: #626b7c;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* Individual project */
+.site-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: #182033;
+}
+
+.site-item:hover,
+.site-item-selected {
+  background: #f1f5fb;
+  border-color: #dce4f2;
+}
+
+.site-item:focus-visible {
+  outline: 2px solid #4e79a7;
+  outline-offset: 2px;
+}
+
+/* Colored location pin */
+.site-pin {
+  width: 11px;
+  height: 14px;
+  margin-top: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 60% 60% 60% 0;
+  transform: rotate(-45deg);
+}
+
+/* Project name and location */
+.site-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.site-info strong {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.site-info > span {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* People, tools, and material counts: one compact row */
+.site-counts {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.site-counts > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: #626b7c;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.site-counts b {
+  color: #374151;
+  font-size: 12px;
+}
+
+/* Messages */
+.map-message {
+  margin: 6px;
+  color: #626b7c;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Message overlaid on the map */
+.sites-map .map-message {
+  position: absolute;
+  left: 4px;
+  bottom: 18px;
+  z-index: 1000;
+  margin: 0;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Smaller screens */
+@media (max-width: 650px) {
+  .panel-sites {
+    --sites-map-height: 280px;
+  }
+
+  .sites-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sites-list {
+    max-height: none;
+    overflow: visible;
+  }
+}

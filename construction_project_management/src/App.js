@@ -116,7 +116,7 @@ function App() {
 
         <div className="column column-middle">
           <ResourceOverview />
-          <ProjectSites />
+          <ProjectSites data={data} projects={inRange.projects} dateRange={dateRange} />
         </div>
 
         <div className="column column-right">
