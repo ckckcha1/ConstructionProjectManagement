@@ -9,8 +9,10 @@
   flex-direction: column;
 }
 
+/* Fixed heights: each chart scrolls inside its area */
 .timeline-section .chart-area {
   flex: 0 0 var(--h-timeline-chart);
+  height: var(--h-timeline-chart);
 }
 
 .section-divider {
@@ -20,7 +22,6 @@
 }
 
 .gantt-section .chart-area {
-  flex: 0 0 auto;
-  min-height: var(--h-gantt-min);
-  overflow-x: auto;
+  flex: 0 0 var(--h-gantt-min);
+  height: var(--h-gantt-min);
 }

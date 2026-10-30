@@ -1,138 +1,85 @@
 import * as d3 from 'd3';
 
 // Part that handles all the data process
-// As we discussed, might need to store that in the database later and make the calls accordingly 
+// Data comes from the Express + PostgreSQL backend in /server
 
 // HARD CODED VALUE for the demo on Prototype demo Monday
 // Decent data point to use as it has 3 project that overlap on this day period
 // NEED TO replace with new Date() for live data later!!!
 export const DEMO_TODAY = new Date(2026, 5, 10);
 
-const parseDate = d3.timeParse('%m/%d/%Y');
+// The API sends dates as 'YYYY-MM-DD' strings
+const parseDate = d3.timeParse('%Y-%m-%d');
 
-const csvUrl = (file) => `${process.env.PUBLIC_URL}/data/${file}`;
-
-// Trim every string cell, some names have trailing spaces.
-const trimRow = (row) => {
-  const out = {};
-  for (const [key, value] of Object.entries(row)) {
-    out[key.trim()] = typeof value === 'string' ? value.trim() : value;
-  }
-  return out;
-};
-
-const toNumber = (value) => (value === '' || value == null ? null : +value);
-
-const resourceTypeOf = (id) => {
-  if (id.startsWith('W-')) return 'worker';
-  if (id.startsWith('T_')) return 'tool';
-  if (id.startsWith('M_')) return 'material';
-  return null;
-};
+// Relative URL, src/setupProxy.js forwards /api to the backend (localhost:5000)
+const apiUrl = (path) => `/api/${path}`;
 
 const byId = (rows) => new Map(rows.map((row) => [row.id, row]));
 
-// HARD CODED!!! color palette values 
-// for the project colors to be used in the dashboard
-const PROJECT_PALETTE = ['#76B7B2', '#59A14F', '#4E79A7', '#F28E2B', '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F'];
+// Project colors are generated, one unique color per project, so new projects never repeat a color.
+// Hues are spread evenly around the HCL color wheel (perceptually even, unlike HSL).
+// Lightness cycles through these levels, so hues that sit close together still look different.
+const COLOR_LIGHTNESS = [52, 68, 38];
+const COLOR_CHROMA = 55;
+const COLOR_HUE_OFFSET = 20; // starts the wheel at a red-orange
 
-// Sorted IDs get palette colours in order, wrapping when there are more
+function generateColors(count) {
+  return d3.range(count).map((i) => {
+    const hue = (COLOR_HUE_OFFSET + (i * 360) / count) % 360;
+    const lightness = COLOR_LIGHTNESS[i % COLOR_LIGHTNESS.length];
+    // Lower the chroma until the color can be shown on screen (some hue/lightness pairs can't)
+    let chroma = COLOR_CHROMA;
+    let color = d3.hcl(hue, chroma, lightness);
+    while (!color.displayable() && chroma > 0) {
+      chroma -= 5;
+      color = d3.hcl(hue, chroma, lightness);
+    }
+    return color.formatHex();
+  });
+}
+
+const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+
+// Steps through the generated colors with a large stride, so projects next to
+// each other in ID order (and often in the charts) get far-apart hues
+function colorStride(count) {
+  let stride = Math.max(1, Math.round(count * 0.382));
+  while (gcd(stride, count) !== 1) stride += 1;
+  return stride;
+}
+
+// Sorted IDs, so a project keeps its color no matter how the views are filtered
 function buildProjectColors(projects) {
   const ids = projects.map((p) => p.id).sort();
-  return new Map(ids.map((id, i) => [id, PROJECT_PALETTE[i % PROJECT_PALETTE.length]]));
+  const colors = generateColors(ids.length);
+  const stride = colorStride(ids.length);
+  return new Map(ids.map((id, i) => [id, colors[(i * stride) % ids.length]]));
 }
 
 export async function loadData() {
-  const [rawProjects, rawPhases, rawAssignments, rawWorkers, rawTools, rawMaterials] =
-    await Promise.all(
-      [
-        'projects.csv',
-        'project_phases.csv',
-        'phase_resources.csv',
-        'workers.csv',
-        'tools.csv',
-        'materials.csv',
-      ].map((file) => d3.csv(csvUrl(file), trimRow))
-    );
+  // The API already uses these field names, only the dates need parsing.
+  // assignments: { id, phaseId, projectId, resourceId, resourceType }
+  const [rawProjects, rawPhases, assignments, workers, tools, materials] = await Promise.all(
+    ['projects', 'phases', 'phase-resources', 'workers', 'tools', 'materials'].map((path) =>
+      d3.json(apiUrl(path))
+    )
+  );
 
-  const projects = rawProjects.map((r) => ({
-    id: r['Project ID'],
-    name: r['Project Name'],
-    description: r['Project Description'],
-    year: toNumber(r['Year']),
-    startDate: parseDate(r['Start Date']),
-    endDate: parseDate(r['End Date']),
-    location: r['Location'],
-    city: r['City'],
-  }));
-
-  const phases = rawPhases.map((r) => ({
-    id: r['Phase ID'],
-    phaseNumber: toNumber(r['Phase']),
-    startDate: parseDate(r['Start Date']),
-    endDate: parseDate(r['End Date']),
-    projectId: r['Project ID'],
-  }));
-
-  const workers = rawWorkers.map((r) => ({
-    id: r['Worker ID'],
-    name: r['Name'],
-    role: r['Role'],
-  }));
-
-  const tools = rawTools.map((r) => ({
-    id: r['Tool ID'],
-    name: r['Tool Name'],
-    description: r['Tool Description'],
-    quantity: toNumber(r['Quantity']),
-    location: r['Location'],
-  }));
-
-  const materials = rawMaterials.map((r) => ({
-    id: r['Material ID'],
-    name: r['Material Name'],
-    description: r['Material Description'],
-    unit: r['Unit'],
-    quantity: toNumber(r['Quantity']),
-    location: r['Location'],
-  }));
-
-  // phase_resources is a join table, drop exact-duplicate rows
-  const seen = new Set();
-  const assignments = [];
-  for (const r of rawAssignments) {
-    const key = `${r['Project ID']}|${r['Resource ID']}|${r['Phase ID']}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    assignments.push({
-      projectId: r['Project ID'],
-      resourceId: r['Resource ID'],
-      phaseId: r['Phase ID'],
-      resourceType: resourceTypeOf(r['Resource ID']),
-    });
-  }
+  const withDates = (row) => ({
+    ...row,
+    startDate: parseDate(row.startDate),
+    endDate: parseDate(row.endDate),
+  });
+  const projects = rawProjects.map(withDates);
+  const phases = rawPhases.map(withDates);
 
   const projectsById = byId(projects);
-  const phasesById = byId(phases);
   const workersById = byId(workers);
   const toolsById = byId(tools);
   const materialsById = byId(materials);
-  const resourceMaps = { worker: workersById, tool: toolsById, material: materialsById };
 
   // Data checks, for now.........
-  for (const a of assignments) {
-    if (!resourceMaps[a.resourceType]?.has(a.resourceId)) {
-      console.warn(`Assignment references unknown resource ${a.resourceId}`, a);
-    }
-    if (!phasesById.has(a.phaseId)) {
-      console.warn(`Assignment references unknown phase ${a.phaseId}`, a);
-    }
-  }
-  for (const p of phases) {
-    if (p.startDate && p.endDate && p.endDate < p.startDate) {
-      console.warn(`Phase ${p.id} ends before it starts`, p);
-    }
-  }
+  // Unknown resources/phases and phases ending before they start are blocked by the database
   for (const p of projects) {
     if (p.startDate && p.year !== p.startDate.getFullYear()) {
       console.warn(

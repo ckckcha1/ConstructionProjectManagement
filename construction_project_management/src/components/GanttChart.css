@@ -1,0 +1,362 @@
+/* Scroll container: both axes scroll here, header and label column stay put */
+.gantt-scroll {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  /* Same viewport width in both charts, so their horizontal scroll stays aligned */
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+.gantt-scroll:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.gantt-content {
+  min-width: 100%;
+}
+
+/* ---- Header (sticky top) ---- */
+.gantt-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  background: #F8F9FB;
+  border-bottom: 1px solid var(--border);
+}
+
+.gantt-corner {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  flex: 0 0 var(--label-width);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: #F8F9FB;
+  border-right: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.gantt-axis {
+  flex: none;
+}
+
+.gantt-months {
+  display: flex;
+  height: 24px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.gantt-month {
+  flex: none;
+  /* clip (not hidden) so the sticky label sticks to the chart's scroll area, not this cell */
+  overflow: clip;
+  border-left: 1px solid var(--border);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 24px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.gantt-month:first-child {
+  border-left: none;
+}
+
+/* Month name stays visible while its month is scrolled partly out of view */
+.gantt-month span {
+  position: sticky;
+  left: calc(var(--label-width) + 8px);
+  padding: 0 8px;
+}
+
+.gantt-weeks {
+  position: relative;
+  height: 24px;
+}
+
+.gantt-week {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--divider);
+  font-size: 11px;
+  line-height: 24px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.gantt-week:first-child {
+  border-left: none;
+}
+
+/* Padding on the text, not the cell, so a one-day week at the end can't overflow */
+.gantt-week span {
+  padding: 0 6px;
+}
+
+.gantt-week.is-current {
+  background: #FDECEC;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---- Body ---- */
+.gantt-body {
+  position: relative;
+}
+
+.gantt-grid {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.gantt-grid line {
+  stroke: var(--divider);
+  stroke-width: 1;
+}
+
+.gantt-today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 0;
+  border-left: 1.5px solid #D92D20;
+  pointer-events: none;
+}
+
+.gantt-empty {
+  position: sticky;
+  left: 0;
+  margin: 0;
+  padding: 16px 12px;
+  width: max-content;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.gantt-row {
+  position: relative;
+  display: flex;
+  border-bottom: 1px solid var(--divider);
+}
+
+.gantt-label {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  flex: 0 0 var(--label-width);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+.gantt-label.is-clickable {
+  cursor: pointer;
+}
+
+.gantt-label.is-clickable:hover .gantt-label-title {
+  text-decoration: underline;
+}
+
+.gantt-label:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.gantt-row.is-selected .gantt-label {
+  background: #F1F4F8;
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+
+.gantt-swatch {
+  flex: none;
+  width: 6px;
+  height: 20px;
+  border-radius: 2px;
+}
+
+.gantt-label-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gantt-label-title,
+.gantt-label-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gantt-label-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--ink);
+}
+
+.gantt-label-meta {
+  font-size: 11px;
+  line-height: 15px;
+  color: var(--muted);
+}
+
+.gantt-track {
+  position: relative;
+  flex: none;
+}
+
+/* ---- Bars ---- */
+.gantt-bar {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  padding: 0; /* on the label instead, so a one-day bar keeps its true width */
+  border: none;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: clip; /* clip (not hidden) so the label below can stick */
+  cursor: pointer;
+}
+
+/* Label stays visible beside the label column when the bar's start is scrolled out of view */
+.gantt-bar-label {
+  position: sticky;
+  left: var(--label-width);
+  padding: 0 6px;
+}
+
+/* A square end means the bar continues past the edge of the date range */
+.gantt-bar.is-clipped-start {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.gantt-bar.is-clipped-end {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.gantt-bar:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--sub);
+}
+
+.gantt-bar:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---- Group rows (People / Tools / Materials) ---- */
+.gantt-group {
+  position: relative;
+  z-index: 3;
+  height: 30px;
+  background: #F4F6F9;
+  border-bottom: 1px solid var(--divider);
+}
+
+.gantt-group-toggle {
+  position: sticky;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content; /* narrower than the row, so it can stick to the left while scrolling */
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.gantt-group-toggle:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.gantt-chevron {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s;
+}
+
+.gantt-chevron.is-collapsed {
+  transform: rotate(-45deg);
+}
+
+.gantt-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.gantt-group-count {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---- Tooltip ---- */
+.gantt-tooltip {
+  position: fixed;
+  z-index: 100;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+}
+
+.gantt-tooltip-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.gantt-tooltip-key {
+  flex: none;
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.gantt-tooltip-line {
+  font-size: 11.5px;
+  line-height: 17px;
+  color: var(--muted);
+}

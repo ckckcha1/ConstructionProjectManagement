@@ -8,7 +8,13 @@ import ProjectDetails from './components/ProjectDetails';
 import AddProject from './components/AddProject';
 import { DEMO_TODAY, addMonths, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
 
-const defaultRange = () => ({ start: DEMO_TODAY, end: addMonths(DEMO_TODAY, 2) });
+// 3 months with today near the middle (starts 1.5 months back).
+// end = addMonths(start, 3) so the "3 months" quick-range button shows as active.
+const defaultRange = () => {
+  const monthBack = addMonths(DEMO_TODAY, -1);
+  const start = new Date(monthBack.getFullYear(), monthBack.getMonth(), monthBack.getDate() - 15);
+  return { start, end: addMonths(start, 3) };
+};
 
 // Stores the UNCHECKED items, so anything new that appears when the range
 // changes starts out checked.
@@ -27,8 +33,8 @@ function App() {
   const [dateRange, setDateRange] = useState(defaultRange);
   const [searchQuery, setSearchQuery] = useState('');
   const [excludedIds, setExcludedIds] = useState(emptyExclusions);
-  // TODO: ResourceOverview will call setSelectedProjectId when a project bar
-  // is clicked. Not wired up yet.
+  // Set by clicking a project in ResourceOverview (Gantt) or ProjectSites (map or Locations list).
+  // Null means nobody picked one, so the views show getDefaultProject instead.
   const [selectedProjectId, setSelectedProjectId] = useState(null);
 
   useEffect(() => {
@@ -54,6 +60,22 @@ function App() {
   );
 
   const summary = useMemo(() => getPeriodSummary(inRange), [inRange]);
+
+  // The filter panel lists every project, not just the ones in the date range
+  const allProjects = useMemo(
+    () =>
+      data
+        ? [...data.projects].sort((a, b) => a.startDate - b.startDate || a.id.localeCompare(b.id))
+        : [],
+    [data]
+  );
+
+  // Projects in the date range that are checked in the filter panel,
+  // the same projects the project Gantt chart shows
+  const visibleProjects = useMemo(
+    () => inRange.projects.filter((p) => !excludedIds.projects.has(p.id)),
+    [inRange, excludedIds]
+  );
 
   const selectedProject = useMemo(
     () =>
@@ -105,6 +127,7 @@ function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           inRange={inRange}
+          allProjects={allProjects}
           excludedIds={excludedIds}
           onToggle={handleToggle}
           onSetGroup={handleSetGroup}
@@ -115,8 +138,25 @@ function App() {
         />
 
         <div className="column column-middle">
-          <ResourceOverview />
-          <ProjectSites data={data} projects={inRange.projects} dateRange={dateRange} />
+          <ResourceOverview
+            data={data}
+            inRange={inRange}
+            excludedIds={excludedIds}
+            dateRange={dateRange}
+            today={DEMO_TODAY}
+            loading={loading}
+            error={error}
+            selectedProjectId={displayedProject?.id ?? null}
+            onSelectProject={setSelectedProjectId}
+          />
+          <ProjectSites
+            data={data}
+            projects={visibleProjects}
+            dateRange={dateRange}
+            selectedProjectId={displayedProject?.id ?? null}
+            isDefaultSelection={selectedProjectId == null}
+            onSelectProject={setSelectedProjectId}
+          />
         </div>
 
         <div className="column column-right">

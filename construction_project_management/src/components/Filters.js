@@ -59,7 +59,7 @@ function SearchIcon() {
   );
 }
 
-function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, onSetGroup, colors}) {
+function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, onSetGroup, colors, isOutside }) {
   const [collapsed, setCollapsed] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -116,10 +116,11 @@ function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, 
             <ul className="filter-list">
               {visible.map((item) => {
                 const color = group.color?.(item, colors);
+                const outside = isOutside?.(item);
                 return (
                   <li key={item.id}>
                     <label
-                      className={`filter-row${color ? ' has-color' : ''}`}
+                      className={`filter-row${color ? ' has-color' : ''}${outside ? ' is-outside' : ''}`}
                       style={color ? { '--item-color': color } : undefined}
                     >
                       <input
@@ -130,7 +131,10 @@ function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, 
                       {color && <span className="filter-dot" aria-hidden="true" />}
                       <span className="filter-row-text">
                         <span className="filter-row-name">{group.label(item)}</span>
-                        <span className="filter-row-meta">{group.meta(item)}</span>
+                        <span className="filter-row-meta">
+                          {group.meta(item)}
+                          {outside && ' · Outside date range'}
+                        </span>
                       </span>
                     </label>
                   </li>
@@ -160,6 +164,7 @@ function Filters({
   searchQuery,
   onSearchChange,
   inRange,
+  allProjects,
   excludedIds,
   onToggle,
   onSetGroup,
@@ -169,6 +174,13 @@ function Filters({
   projectColorById,
 }) {
   const { start, end } = dateRange;
+
+  // Projects list every project, the other groups only what's in the date range.
+  // Projects in the range come first (stable sort keeps start-date order within each part).
+  const inRangeProjectIds = new Set(inRange.projects.map((p) => p.id));
+  const isOutsideRange = (project) => !inRangeProjectIds.has(project.id);
+  const projects = [...allProjects].sort((a, b) => isOutsideRange(a) - isOutsideRange(b));
+  const itemsFor = (type) => (type === 'projects' ? projects : inRange[type]);
   const query = searchQuery.trim().toLowerCase();
   const searching = query !== '';
 
@@ -207,13 +219,14 @@ function Filters({
       <FilterGroup
         key={group.type}
         group={group}
-        items={inRange[group.type].filter((item) => matches(group, item))}
-        totalCount={inRange[group.type].length}
+        items={itemsFor(group.type).filter((item) => matches(group, item))}
+        totalCount={itemsFor(group.type).length}
         excluded={excludedIds[group.type]}
         searching={searching}
         onToggle={onToggle}
         onSetGroup={onSetGroup}
         colors={projectColorById}
+        isOutside={group.type === 'projects' ? isOutsideRange : undefined}
       />
     ));
   }
