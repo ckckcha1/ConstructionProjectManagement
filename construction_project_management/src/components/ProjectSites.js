@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './ProjectSites.css';
@@ -162,15 +162,30 @@ function buildIcon(project) {
   });
 }
 
-// inRangeProjects is the date-filtered list from App (same one Filters shows).
-function ProjectSites({ data, projects: inRangeProjects, dateRange }) {
+// inRangeProjects: projects in the date range that are checked in the filter panel
+// (from App, the same projects the project Gantt chart shows).
+// The selected project is shared with the Gantt charts and Project Details, so it lives in App:
+// selectedId is the project they show, isDefaultSelection is true when nobody picked it
+// (App's default project), and onSelectProject(id or null) changes it.
+function ProjectSites({
+  data,
+  projects: inRangeProjects,
+  dateRange,
+  selectedProjectId: selectedId,
+  isDefaultSelection,
+  onSelectProject,
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const layerRef = useRef(null);
   const markersRef = useRef(new Map()); // project id -> { marker, project }
-  const prevSelectedRef = useRef(null);
+  const prevFlyTargetRef = useRef(null);
 
-  const [selectedId, setSelectedId] = useState(null);
+  // Leaflet handlers are attached once, so they call the latest callback through a ref
+  const onSelectRef = useRef(onSelectProject);
+  useEffect(() => {
+    onSelectRef.current = onSelectProject;
+  }, [onSelectProject]);
 
   const projects = useMemo(() => {
     if (!data || !inRangeProjects) return [];
@@ -184,13 +199,6 @@ function ProjectSites({ data, projects: inRangeProjects, dateRange }) {
       }))
       .sort((a, b) => String(a.id).localeCompare(String(b.id)));
   }, [data, inRangeProjects, dateRange]);
-
-  // A range change that drops the selected project clears the selection.
-  useEffect(() => {
-    if (selectedId != null && !projects.some((p) => p.id === selectedId)) {
-      setSelectedId(null);
-    }
-  }, [projects, selectedId]);
 
   const visibleProjects = useMemo(
     () => withMapPositions(projects.filter((project) => project.coordinates)),
@@ -228,8 +236,8 @@ function ProjectSites({ data, projects: inRangeProjects, dateRange }) {
     map.on('focus', () => map.scrollWheelZoom.enable());
     map.on('blur', () => map.scrollWheelZoom.disable());
 
-    // Clicking empty map clears the selection.
-    map.on('click', () => setSelectedId(null));
+    // Clicking empty map clears the selection (the dashboard falls back to its default project).
+    map.on('click', () => onSelectRef.current?.(null));
 
     // Keep tiles correct when the dashboard layout resizes.
     const observer = new ResizeObserver(() => map.invalidateSize());
@@ -274,7 +282,7 @@ function ProjectSites({ data, projects: inRangeProjects, dateRange }) {
         className: 'project-label',
       });
 
-      marker.on('click', () => setSelectedId(project.id));
+      marker.on('click', () => onSelectRef.current?.(project.id));
       marker.addTo(group);
       entries.set(project.id, { marker, project });
     });
@@ -307,9 +315,12 @@ function ProjectSites({ data, projects: inRangeProjects, dateRange }) {
       marker.setZIndexOffset(selected ? 1000 : 0);
     });
 
+    // Fly only to a project someone picked (here, in the Gantt, ...), not App's default
+    // project, so on load the map keeps framing every project
+    const flyTarget = isDefaultSelection ? null : selectedId;
     const map = mapRef.current;
-    if (map && selectedId != null && selectedId !== prevSelectedRef.current) {
-      const entry = markersRef.current.get(selectedId);
+    if (map && flyTarget != null && flyTarget !== prevFlyTargetRef.current) {
+      const entry = markersRef.current.get(flyTarget);
       if (entry) {
         map.flyTo(
           entry.marker.getLatLng(),
@@ -318,8 +329,8 @@ function ProjectSites({ data, projects: inRangeProjects, dateRange }) {
         );
       }
     }
-    prevSelectedRef.current = selectedId;
-  }, [selectedId, visibleProjects]);
+    prevFlyTargetRef.current = flyTarget;
+  }, [selectedId, isDefaultSelection, visibleProjects]);
 
   return (
     <section className="panel panel-sites">
@@ -351,7 +362,7 @@ function ProjectSites({ data, projects: inRangeProjects, dateRange }) {
               className={`site-item ${
                 selectedId === project.id ? 'site-item-selected' : ''
               }`}
-              onClick={() => setSelectedId(project.id)}
+              onClick={() => onSelectProject(project.id)}
             >
               <span
                 className="site-pin"

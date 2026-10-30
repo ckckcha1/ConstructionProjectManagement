@@ -33,7 +33,8 @@ function App() {
   const [dateRange, setDateRange] = useState(defaultRange);
   const [searchQuery, setSearchQuery] = useState('');
   const [excludedIds, setExcludedIds] = useState(emptyExclusions);
-  // Set by clicking a project row or bar in ResourceOverview
+  // Set by clicking a project in ResourceOverview (Gantt) or ProjectSites (map or Locations list).
+  // Null means nobody picked one, so the views show getDefaultProject instead.
   const [selectedProjectId, setSelectedProjectId] = useState(null);
 
   useEffect(() => {
@@ -67,6 +68,13 @@ function App() {
         ? [...data.projects].sort((a, b) => a.startDate - b.startDate || a.id.localeCompare(b.id))
         : [],
     [data]
+  );
+
+  // Projects in the date range that are checked in the filter panel,
+  // the same projects the project Gantt chart shows
+  const visibleProjects = useMemo(
+    () => inRange.projects.filter((p) => !excludedIds.projects.has(p.id)),
+    [inRange, excludedIds]
   );
 
   const selectedProject = useMemo(
@@ -141,7 +149,14 @@ function App() {
             selectedProjectId={displayedProject?.id ?? null}
             onSelectProject={setSelectedProjectId}
           />
-          <ProjectSites />
+          <ProjectSites
+            data={data}
+            projects={visibleProjects}
+            dateRange={dateRange}
+            selectedProjectId={displayedProject?.id ?? null}
+            isDefaultSelection={selectedProjectId == null}
+            onSelectProject={setSelectedProjectId}
+          />
         </div>
 
         <div className="column column-right">
