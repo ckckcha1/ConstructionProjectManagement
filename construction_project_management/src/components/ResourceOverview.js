@@ -38,7 +38,7 @@ const phaseDates = (phase) =>
 
 // Rows for both charts, from the projects and resources checked in the filter panel.
 // Bars are the phases that overlap the date range; a resource gets one bar per phase it's assigned to.
-function buildRows({ data, inRange, excludedIds, dateRange, collapsedGroups, onSelectProject, onToggleGroup, selectedProjectId }) {
+function buildRows({ data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, onSelectProject, onToggleGroup, selectedProjectId }) {
   const projects = inRange.projects.filter((p) => !excludedIds.projects.has(p.id));
   const projectIds = new Set(projects.map((p) => p.id));
   const colorOf = (projectId) => data.projectColorById.get(projectId);
@@ -52,6 +52,47 @@ function buildRows({ data, inRange, excludedIds, dateRange, collapsedGroups, onS
   );
   const phaseById = new Map(phases.map((ph) => [ph.id, ph]));
   const phasesByProject = d3.group(phases, (ph) => ph.projectId);
+  // Include all phases when checking conflicts, even if their
+// projects are not currently selected in the filters.
+const allPhaseById = new Map(data.phases.map((ph) => [ph.id, ph]));
+
+const conflictingAssignmentIds = new Set();
+
+const allAssignmentsByResource = d3.group(
+  data.assignments,
+  (a) => a.resourceId
+);
+
+for (const assignments of allAssignmentsByResource.values()) {
+  for (let i = 0; i < assignments.length; i++) {
+    for (let j = i + 1; j < assignments.length; j++) {
+      const first = assignments[i];
+      const second = assignments[j];
+
+      const firstPhase = allPhaseById.get(first.phaseId);
+      const secondPhase = allPhaseById.get(second.phaseId);
+
+      if (!firstPhase || !secondPhase) continue;
+      if (firstPhase.projectId === secondPhase.projectId) continue;
+
+      if (
+        firstPhase.startDate &&
+        firstPhase.endDate &&
+        secondPhase.startDate &&
+        secondPhase.endDate &&
+        overlaps(
+          firstPhase.startDate,
+          firstPhase.endDate,
+          secondPhase.startDate,
+          secondPhase.endDate
+        )
+      ) {
+        conflictingAssignmentIds.add(first.id);
+        conflictingAssignmentIds.add(second.id);
+      }
+    }
+  }
+}
 
   const resourcesPerProject = d3.rollup(
     data.assignments,
@@ -85,6 +126,36 @@ function buildRows({ data, inRange, excludedIds, dateRange, collapsedGroups, onS
     })),
   }));
 
+    // Add the temporary what-if project to the project timeline.
+  if (whatIfPreview) {
+    projectRows.push({
+      type: 'item',
+      key: 'what-if-preview',
+      title: whatIfPreview.name || 'New project',
+      meta: whatIfPreview.place || 'Proposed project',
+      swatch: '#7c3aed',
+      selected: false,
+      bars:
+        whatIfPreview.projectStart && whatIfPreview.projectEnd
+          ? [{
+              key: 'what-if-project-bar',
+              start: new Date(whatIfPreview.projectStart),
+              end: new Date(whatIfPreview.projectEnd),
+              color: '#c4b5fd',
+              isPreview: true,
+              label: whatIfPreview.name || 'WHAT-IF',
+              tooltip: {
+                title: whatIfPreview.name || 'New project',
+                lines: [
+                  whatIfPreview.place || 'Proposed project',
+                  `${whatIfPreview.projectStart} – ${whatIfPreview.projectEnd}`,
+                ],
+              },
+            }]
+          : [],
+    });
+  }
+
   const assignmentsByResource = d3.group(
     data.assignments.filter((a) => phaseById.has(a.phaseId)),
     (a) => a.resourceId
@@ -93,8 +164,10 @@ function buildRows({ data, inRange, excludedIds, dateRange, collapsedGroups, onS
   const resourceRows = [];
   for (const group of RESOURCE_GROUPS) {
     const resources = inRange[group.type].filter(
-      (r) => !excludedIds[group.type].has(r.id) && assignmentsByResource.has(r.id)
-    );
+  (r) =>
+    !excludedIds[group.type].has(r.id) &&
+    assignmentsByResource.has(r.id)
+  );
     if (resources.length === 0) continue;
 
     const collapsed = collapsedGroups.has(group.type);
@@ -114,26 +187,30 @@ function buildRows({ data, inRange, excludedIds, dateRange, collapsedGroups, onS
         key: resource.id,
         title: group.label(resource),
         meta: group.meta(resource),
-        bars: assignmentsByResource.get(resource.id).map((a) => {
-          const phase = phaseById.get(a.phaseId);
-          const project = data.projectsById.get(phase.projectId);
-          return {
-            key: a.id,
-            start: phase.startDate,
-            end: phase.endDate,
-            color: colorOf(project.id),
-            label: project.id,
-            tooltip: {
-              title: group.label(resource),
-              lines: [
-                ...group.details(resource),
-                `${project.id} ${project.name} · Phase ${phase.phaseNumber}`,
-                phaseDates(phase),
-              ],
-            },
-            onClick: () => onSelectProject(project.id),
-          };
-        }),
+        bars: [
+  ...(assignmentsByResource.get(resource.id) ?? []).map((a) => {
+    const phase = phaseById.get(a.phaseId);
+    const project = data.projectsById.get(phase.projectId);
+
+    return {
+      key: a.id,
+      start: phase.startDate,
+      end: phase.endDate,
+      color: colorOf(project.id),
+      isConflict: conflictingAssignmentIds.has(a.id),
+      label: project.id,
+      tooltip: {
+        title: group.label(resource),
+        lines: [
+          ...group.details(resource),
+          `${project.id} ${project.name} · Phase ${phase.phaseNumber}`,
+          phaseDates(phase),
+        ],
+      },
+      onClick: () => onSelectProject(project.id),
+    };
+  }), 
+],
       });
     }
   }
@@ -143,6 +220,7 @@ function buildRows({ data, inRange, excludedIds, dateRange, collapsedGroups, onS
 
 function ResourceOverview({
   data,
+  whatIfPreview,
   inRange,
   excludedIds,
   dateRange,
@@ -207,6 +285,7 @@ function ResourceOverview({
       data
         ? buildRows({
             data,
+            whatIfPreview,
             inRange,
             excludedIds,
             dateRange,
@@ -216,7 +295,7 @@ function ResourceOverview({
             selectedProjectId,
           })
         : { projectRows: [], resourceRows: [] },
-    [data, inRange, excludedIds, dateRange, collapsedGroups, onSelectProject, toggleGroup, selectedProjectId]
+    [data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, onSelectProject, toggleGroup, selectedProjectId]
   );
 
   let projectsEmpty = 'No projects selected in this period.';

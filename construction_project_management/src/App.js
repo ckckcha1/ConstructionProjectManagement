@@ -36,6 +36,7 @@ function App() {
   // Set by clicking a project in ResourceOverview (Gantt) or ProjectSites (map or Locations list).
   // Null means nobody picked one, so the views show getDefaultProject instead.
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [whatIfPreview, setWhatIfPreview] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +54,25 @@ function App() {
       cancelled = true;
     };
   }, []);
+
+    // Refresh dashboard data after a new project is saved
+  const refreshData = useCallback(async (newProjectId) => {
+  setLoading(true);
+  try {
+    const result = await loadData();
+    setData(result);
+
+    if (newProjectId) {
+      setSelectedProjectId(newProjectId);
+    }
+
+    setError(null);
+  } catch (err) {
+    setError(err.message || 'Failed to refresh data');
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   const inRange = useMemo(
     () => getResourcesInRange(data, dateRange.start, dateRange.end),
@@ -140,6 +160,7 @@ function App() {
         <div className="column column-middle">
           <ResourceOverview
             data={data}
+            whatIfPreview={whatIfPreview}
             inRange={inRange}
             excludedIds={excludedIds}
             dateRange={dateRange}
@@ -167,7 +188,10 @@ function App() {
             loading={loading}
             error={error}
           />
-          <AddProject />
+          <AddProject
+              onSaved={refreshData}
+              onPreviewChange={setWhatIfPreview}
+          />
         </div>
       </main>
     </div>

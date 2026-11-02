@@ -258,8 +258,10 @@ function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRe
                     const showLabel = textWidth(bar.label) + 2 * BAR_LABEL_PADDING <= bar.width;
                     const className = [
                       'gantt-bar',
+                      bar.isPreview && 'is-preview',
                       bar.clippedStart && 'is-clipped-start',
                       bar.clippedEnd && 'is-clipped-end',
+                      bar.isConflict && 'is-conflict',
                     ]
                       .filter(Boolean)
                       .join(' ');
@@ -286,6 +288,11 @@ function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRe
                         }}
                         onBlur={hideTooltip}
                       >
+                        {bar.isConflict && (
+                            <span className="gantt-conflict-banner">
+                                ⚠ Phase 1 — Conflict
+                            </span>
+                        )}
                         {showLabel && <span className="gantt-bar-label">{bar.label}</span>}
                       </button>
                     );

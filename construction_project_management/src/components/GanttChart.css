@@ -360,3 +360,41 @@
   line-height: 17px;
   color: var(--muted);
 }
+
+/* Conflict highlighting for resource assignments */
+/* Conflict warning banner */
+.gantt-bar.is-conflict {
+  outline: 1.5px solid #dc2626;
+  outline-offset: 1px;
+  overflow: visible;
+  z-index: 3;
+}
+
+.gantt-conflict-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -15px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 3px 3px 0 0;
+  z-index: 4;
+}
+
+/* What-if proposed assignment bars */
+.gantt-bar.is-preview {
+  background: #c4b5fd !important;
+  border: 2px dashed #7c3aed !important;
+  box-sizing: border-box;
+  opacity: 0.9;
+}
