@@ -440,7 +440,7 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
 
       const startDate = toISODate(projectStart)
       const endDate = toISODate(projectEnd)
-
+      const projectYear = new Date(`${startDate}T00:00:00Z`).getUTCFullYear()
 
       if (endDate < startDate) {
         throw new Error('Project end date cannot be before the start date.')
