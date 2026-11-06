@@ -602,24 +602,27 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
       />
 
       <div className="ap-row2">
-        <div>
-          <div className="ap-label">Project start</div>
-          <input
-            className="ap-input"
-            value={projectStart}
-            onChange={(e) => setProjectStart(e.target.value)}
-          />
-        </div>
+  <div>
+    <div className="ap-label">Project start</div>
+    <input
+      type="date"
+      className="ap-input"
+      value={projectStart}
+      onChange={(e) => setProjectStart(e.target.value)}
+    />
+  </div>
 
-        <div>
-          <div className="ap-label">Project end</div>
-          <input
-            className="ap-input"
-            value={projectEnd}
-            onChange={(e) => setProjectEnd(e.target.value)}
-          />
-        </div>
-      </div>
+  <div>
+    <div className="ap-label">Project end</div>
+    <input
+      type="date"
+      className="ap-input"
+      value={projectEnd}
+      min={projectStart || undefined}
+      onChange={(e) => setProjectEnd(e.target.value)}
+    />
+  </div>
+</div>
 
       <h3 className="ap-section spaced">Phases</h3>
 
@@ -648,24 +651,28 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
           </div>
 
           <div className="ap-phase-dates">
-            <input
-              className="ap-input"
-              value={p.start}
-              placeholder="Start"
-              onChange={(e) => updatePhase(p.id, 'start', e.target.value)}
-            />
+  <input
+    type="date"
+    className="ap-input"
+    value={p.start}
+    min={projectStart || undefined}
+    max={projectEnd || undefined}
+    onChange={(e) => updatePhase(p.id, 'start', e.target.value)}
+  />
 
-            <span className="ap-arrow">→</span>
+  <span className="ap-arrow">→</span>
 
-            <input
-              className="ap-input"
-              value={p.end}
-              placeholder="End"
-              onChange={(e) => updatePhase(p.id, 'end', e.target.value)}
-            />
-          </div>
-        </div>
-      ))}
+  <input
+    type="date"
+    className="ap-input"
+    value={p.end}
+    min={p.start || projectStart || undefined}
+    max={projectEnd || undefined}
+    onChange={(e) => updatePhase(p.id, 'end', e.target.value)}
+  />
+</div>
+</div>
+))}
 
       <button type="button" className="ap-add-phase" onClick={addPhase}>
         + Add phase

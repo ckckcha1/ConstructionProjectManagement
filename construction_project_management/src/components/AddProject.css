@@ -210,3 +210,13 @@
   border: 1px solid #e5e7eb; color: #6b7280; font-size: 10px; font-weight: 600; line-height: 1.4; text-align: left;
 }
 .ap-notice.ok { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+
+/* Give native calendar date fields enough space */
+.ap-input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: 12px;
+  padding-left: 6px;
+  padding-right: 2px;
+}
