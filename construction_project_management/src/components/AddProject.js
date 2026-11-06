@@ -53,7 +53,7 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
     if (bodyRef.current) bodyRef.current.scrollTop = 0
   }, [step])
 
-  
+
   // Load workers, tools, and materials from the backend.
   useEffect(() => {
     let cancelled = false
@@ -249,14 +249,10 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
   const parsePhaseDate = useCallback((value) => {
   if (!value) return null
 
-    const year = new Date(projectStart).getFullYear()
-
-    const parsed = new Date(
-    value.includes(',') ? value : `${value}, ${year}`
-    )
+  const parsed = new Date(`${value}T00:00:00Z`)
 
   return Number.isNaN(parsed.getTime()) ? null : parsed
-  }, [projectStart])
+}, [])
 
     // Send the current what-if draft to the dashboard.
   const hasResourceConflict = useCallback((resource) => {
@@ -294,7 +290,7 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
     })
   })
 }, [assigned, workerSchedules, phases, parsePhaseDate])
-  
+
     useEffect(() => {
   if (step === 0 || saved || !onPreviewChange) {
     onPreviewChange?.(null)
@@ -416,6 +412,7 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
 
   // ---------- Save project and assignments ----------
 
+
   const handleSave = async () => {
     if (saving) return
 
@@ -424,21 +421,45 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
     setSaving(true)
 
     try {
-      const toISODate = (value, year) => {
-        const parsed = new Date(
-          value.includes(',') ? value : `${value}, ${year}`
-        )
+      const toISODate = (value) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) {
+          throw new Error(`Invalid or missing date: ${value || 'empty'}`)
+        }
 
-        if (Number.isNaN(parsed.getTime())) {
+        const parsed = new Date(`${value}T00:00:00Z`)
+
+        if (
+          Number.isNaN(parsed.getTime()) ||
+          parsed.toISOString().slice(0, 10) !== value
+        ) {
           throw new Error(`Invalid date: ${value}`)
         }
 
-        return parsed.toISOString().split('T')[0]
+        return value
       }
 
       const startDate = toISODate(projectStart)
       const endDate = toISODate(projectEnd)
-      const projectYear = new Date(startDate).getUTCFullYear()
+
+
+      if (endDate < startDate) {
+        throw new Error('Project end date cannot be before the start date.')
+      }
+
+      for (const phase of phases) {
+        const phaseStart = toISODate(phase.start)
+        const phaseEnd = toISODate(phase.end)
+
+        if (phaseEnd < phaseStart) {
+          throw new Error(`${phase.name}: End date cannot be before start date.`)
+        }
+
+        if (phaseStart < startDate || phaseEnd > endDate) {
+          throw new Error(
+            `${phase.name}: Phase dates must be within the project dates.`
+          )
+        }
+      }
 
       const projectData = {
         name,
@@ -450,8 +471,8 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
         city: place,
         phases: phases.map((phase, index) => ({
           name: phase.name,
-          startDate: toISODate(phase.start, projectYear),
-          endDate: toISODate(phase.end, projectYear),
+          startDate: toISODate(phase.start),
+          endDate: toISODate(phase.end),
           phaseNumber: index + 1,
         })),
       }
