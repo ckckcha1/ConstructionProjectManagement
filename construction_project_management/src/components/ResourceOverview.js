@@ -18,6 +18,7 @@ const RESOURCE_GROUPS = [
     meta: (t) => t.id,
     details: (t) => [`Quantity: ${quantityText(t.quantity)}`],
   },
+  
   {
     type: 'materials',
     title: 'Materials',
@@ -26,9 +27,22 @@ const RESOURCE_GROUPS = [
     details: (m) => [`Quantity: ${quantityText(m.quantity)} · Unit: ${m.unit || '—'}`],
   },
 ];
+// ADD THE NEW CODE HERE, OUTSIDE THE ARRAY
+const PREVIEW_RESOURCE_TYPES = {
+  workers: 'worker',
+  tools: 'tool',
+  materials: 'material',
+};
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const dayCount = (start, end) => d3.timeDay.count(start, end) + 1; // inclusive
+const previewDate = (value) => {
+  if (!value) return null;
+
+  const date = new Date(`${value}T00:00:00`);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 
 const phaseDates = (phase) =>
   `${formatDate(phase.startDate)} – ${formatDate(phase.endDate)} · ${plural(
@@ -171,14 +185,34 @@ for (const assignments of allAssignmentsByResource.values()) {
     data.assignments.filter((a) => phaseById.has(a.phaseId)),
     (a) => a.resourceId
   );
+  const previewAssignmentsByResource = d3.group(
+  (whatIfPreview?.assignments ?? []).filter((assignment) => {
+    const start = previewDate(assignment.startDate);
+    const end = previewDate(assignment.endDate);
+
+    return start && end && start <= end;
+  }),
+  (assignment) => `${assignment.resourceType}:${assignment.resourceId}`
+);
 
   const resourceRows = [];
-  for (const group of RESOURCE_GROUPS) {
-    const resources = inRange[group.type].filter(
-  (r) =>
-    !excludedIds[group.type].has(r.id) &&
-    assignmentsByResource.has(r.id)
-  );
+
+for (const group of RESOURCE_GROUPS) {
+  const resources = data[group.type].filter((r) => {
+    const previewKey = `${PREVIEW_RESOURCE_TYPES[group.type]}:${r.id}`;
+
+    const hasSavedAssignments =
+      inRange[group.type].some((item) => item.id === r.id) &&
+      assignmentsByResource.has(r.id);
+
+    const hasPreviewAssignments =
+      previewAssignmentsByResource.has(previewKey);
+
+    return (
+      !excludedIds[group.type].has(r.id) &&
+      (hasSavedAssignments || hasPreviewAssignments)
+    );
+  });
     if (resources.length === 0) continue;
 
     const collapsed = collapsedGroups.has(group.type);
@@ -221,6 +255,26 @@ for (const assignments of allAssignmentsByResource.values()) {
       onClick: () => onSelectProject(project.id),
     };
   }), 
+  // Temporary What-if resource assignment bars
+...(previewAssignmentsByResource.get(
+  `${PREVIEW_RESOURCE_TYPES[group.type]}:${resource.id}`
+) ?? []).map((assignment) => ({
+  key: `preview-${assignment.resourceType}-${assignment.resourceId}-${assignment.phaseId}`,
+  start: previewDate(assignment.startDate),
+  end: previewDate(assignment.endDate),
+  color: '#c4b5fd',
+  isPreview: true,
+  label: assignment.phaseName || 'What-if',
+  tooltip: {
+    title: `${whatIfPreview?.name || 'New project'} — ${assignment.phaseName || 'Phase'}`,
+    lines: [
+      group.label(resource),
+      `${assignment.startDate} – ${assignment.endDate}`,
+      'Temporary resource assignment',
+    ],
+  },
+})),
+  
 ],
       });
     }
