@@ -136,24 +136,35 @@ for (const assignments of allAssignmentsByResource.values()) {
       swatch: '#7c3aed',
       selected: false,
       bars:
-        whatIfPreview.projectStart && whatIfPreview.projectEnd
-          ? [{
-              key: 'what-if-project-bar',
-              start: new Date(whatIfPreview.projectStart),
-              end: new Date(whatIfPreview.projectEnd),
-              color: '#c4b5fd',
-              isPreview: true,
-              label: whatIfPreview.name || 'WHAT-IF',
-              tooltip: {
-                title: whatIfPreview.name || 'New project',
-                lines: [
-                  whatIfPreview.place || 'Proposed project',
-                  `${whatIfPreview.projectStart} – ${whatIfPreview.projectEnd}`,
-                ],
-              },
-            }]
-          : [],
-    });
+     whatIfPreview.phases
+  ?.filter((phase) => {
+    if (!phase.start || !phase.end) return false;
+
+    const start = new Date(`${phase.start}T00:00:00`);
+    const end = new Date(`${phase.end}T00:00:00`);
+
+    return (
+      !Number.isNaN(start.getTime()) &&
+      !Number.isNaN(end.getTime()) &&
+      start <= end
+    );
+  })
+  .map((phase, index) => ({
+    key: `what-if-phase-${phase.id ?? index}`,
+    start: new Date(`${phase.start}T00:00:00`),
+    end: new Date(`${phase.end}T00:00:00`),
+    color: '#c4b5fd',
+    isPreview: true,
+    label: phase.name || `Phase ${index + 1}`,
+    tooltip: {
+      title: `${whatIfPreview.name || 'New project'} — ${phase.name || `Phase ${index + 1}`}`,
+      lines: [
+        whatIfPreview.place || 'Proposed project',
+        `${phase.start} – ${phase.end}`,
+      ],
+    },
+  })) ?? [],
+  });
   }
 
   const assignmentsByResource = d3.group(
