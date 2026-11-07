@@ -1,6 +1,7 @@
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import './AddProject.css'
+import { toInputValue } from '../data'
 
 const PHASE_COLORS = ['#F59E0B', '#2563EB', '#16A34A', '#7C3AED', '#EC4899']
 
@@ -17,16 +18,31 @@ const RESOURCE_TYPES = {
   Materials: 'material',
 }
 
-const RESOURCE_ENDPOINTS = {
-  worker: 'workers',
-  tool: 'tools',
-  material: 'materials',
-}
-
 const resourceKey = (resource) =>
   `${resource.resourceType}:${resource.id}`
 
-export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }) {
+// Requests use relative /api URLs, which src/setupProxy.js forwards to the backend
+// (same as data.js), so they work on any dev-server port.
+const postJson = (url, body) =>
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+// The backend sends errors as { "error": "..." } (server/index.js); fall back to the raw text
+async function readError(response, fallback) {
+  const text = await response.text().catch(() => '')
+  try {
+    return JSON.parse(text).error || fallback
+  } catch {
+    return text || fallback
+  }
+}
+
+// data: the dashboard data App loads (and reloads after a save), or null while loading.
+// Resources and their existing schedules come from it instead of separate requests.
+export default function AddProject({ initialStep = 0, data, onSaved, onPreviewChange }) {
   const [step, setStep] = useState(initialStep)
   const [name, setName] = useState('')
   const [place, setPlace] = useState('')
@@ -36,9 +52,6 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
   const [phases, setPhases] = useState(START_PHASES)
   const [nextId, setNextId] = useState(2)
   const [assigned, setAssigned] = useState({})
-  const [resources, setResources] = useState([])
-  const [workerSchedules, setWorkerSchedules] = useState({})
-  const [schedulesLoaded, setSchedulesLoaded] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [tab, setTab] = useState('People')
   const [error, setError] = useState('')
@@ -53,111 +66,43 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
   }, [step])
 
 
-  // Load workers, tools, and materials from the backend.
-  useEffect(() => {
-    let cancelled = false
+  // Workers, tools, and materials from the dashboard data (no separate requests).
+  const resources = useMemo(() => {
+    if (!data) return []
 
-    async function loadResources() {
-      try {
-        const types = [
-          { key: 'worker', endpoint: 'workers' },
-          { key: 'tool', endpoint: 'tools' },
-          { key: 'material', endpoint: 'materials' },
-        ]
+    return [
+      ...data.workers.map((r) => ({ ...r, resourceType: 'worker' })),
+      ...data.tools.map((r) => ({ ...r, resourceType: 'tool' })),
+      ...data.materials.map((r) => ({ ...r, resourceType: 'material' })),
+    ]
+  }, [data])
 
-        const results = await Promise.all(
-          types.map(async (type) => {
-            const response = await fetch(
-              `http://localhost:5000/api/${type.endpoint}`
-            )
+  // Existing schedule of every resource, keyed like resourceKey(), built from the
+  // loaded assignments and phases instead of one request per resource.
+  // Dates are 'YYYY-MM-DD' strings, the format hasResourceConflict compares.
+  const workerSchedules = useMemo(() => {
+    if (!data) return {}
 
-            if (!response.ok) {
-              throw new Error(`Failed to load ${type.endpoint}.`)
-            }
+    const phaseById = new Map(data.phases.map((phase) => [phase.id, phase]))
+    const schedules = {}
 
-            const data = await response.json()
+    for (const assignment of data.assignments) {
+      const phase = phaseById.get(assignment.phaseId)
+      if (!phase || !phase.startDate || !phase.endDate) continue
 
-            if (!Array.isArray(data)) {
-              throw new Error(`Unexpected response when loading ${type.endpoint}.`)
-            }
-
-            return data.map((resource) => ({
-              ...resource,
-              resourceType: type.key,
-            }))
-          })
-        )
-
-        if (!cancelled) {
-          setResources(results.flat())
-          setError('')
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message || 'Could not load resources.')
-        }
-      }
+      const key = `${assignment.resourceType}:${assignment.resourceId}`
+      if (!schedules[key]) schedules[key] = []
+      schedules[key].push({
+        startDate: toInputValue(phase.startDate),
+        endDate: toInputValue(phase.endDate),
+      })
     }
 
-    loadResources()
+    return schedules
+  }, [data])
 
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  // Load existing schedules for every resource.
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadResourceSchedules() {
-      try {
-        setSchedulesLoaded(false)
-
-        const results = await Promise.all(
-          resources.map(async (resource) => {
-            const endpoint = RESOURCE_ENDPOINTS[resource.resourceType]
-
-            const response = await fetch(
-              `http://localhost:5000/api/${endpoint}/${encodeURIComponent(resource.id)}/phases`
-            )
-
-            if (!response.ok) {
-              throw new Error(
-                `Failed to load schedule for ${resource.name}.`
-              )
-            }
-
-            const existingPhases = await response.json()
-
-            return [resourceKey(resource), existingPhases]
-          })
-        )
-
-        if (!cancelled) {
-          setWorkerSchedules(Object.fromEntries(results))
-          setSchedulesLoaded(true)
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message || 'Could not load resource schedules.')
-          setSchedulesLoaded(false)
-        }
-      }
-    }
-
-    if (resources.length === 0) {
-      setWorkerSchedules({})
-      setSchedulesLoaded(false)
-      return
-    }
-
-    loadResourceSchedules()
-
-    return () => {
-      cancelled = true
-    }
-  }, [resources])
+  // Schedules are ready as soon as the dashboard data is.
+  const schedulesLoaded = Boolean(data)
 
   const colorOf = (phaseId) => {
     const i = phases.findIndex((p) => p.id === phaseId)
@@ -479,64 +424,58 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
         })),
       }
 
-      // 1. Create the project and its phases.
-      const response = await fetch('http://localhost:5000/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectData),
-      })
+      // 1. Create the project and its phases (the backend saves them together).
+      const response = await postJson('/api/projects', projectData)
 
       if (!response.ok) {
-        const message = await response.text()
-        throw new Error(message || 'Failed to save project.')
+        throw new Error(await readError(response, 'Failed to save project.'))
       }
 
       const createdProject = await response.json()
       const createdPhases = createdProject.phases
 
-      if (
-        !Array.isArray(createdPhases) ||
-        createdPhases.length !== phases.length ||
-        createdPhases.some((phase) => !phase.id)
-      ) {
-        throw new Error(
-          'Project was created, but the server did not return all phase IDs. Check the saved project before retrying.'
-        )
-      }
-
-      // 2. Save every selected worker, tool, and material.
-      for (const resource of resources) {
-        const selectedPhaseIds = assigned[resourceKey(resource)] || []
-
-        for (const localPhaseId of selectedPhaseIds) {
-          const phaseIndex = phases.findIndex(
-            (phase) => phase.id === localPhaseId
-          )
-
-          if (phaseIndex === -1) continue
-
-          const phaseId = createdPhases[phaseIndex].id
-
-          const assignmentResponse = await fetch(
-            `http://localhost:5000/api/phases/${encodeURIComponent(phaseId)}/resources`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                resourceType: resource.resourceType,
-                resourceId: resource.id,
-              }),
-            }
-          )
-
-          if (!assignmentResponse.ok) {
-            const message = await assignmentResponse.text()
-
-            throw new Error(
-              `Project was created, but assigning ${resource.name} failed: ${message || assignmentResponse.statusText}. Check the saved project before retrying.`
-            )
-          }
+      // 2. Save every selected worker, tool, and material, all at once.
+      //    If anything fails, delete the new project (which also removes its phases and
+      //    any assignments already saved), so a failed save never leaves half a project.
+      try {
+        if (
+          !Array.isArray(createdPhases) ||
+          createdPhases.length !== phases.length ||
+          createdPhases.some((phase) => !phase.id)
+        ) {
+          throw new Error('The server did not return all phase IDs.')
         }
+
+        const assignments = resources.flatMap((resource) =>
+          (assigned[resourceKey(resource)] || [])
+            .map((localPhaseId) => phases.findIndex((phase) => phase.id === localPhaseId))
+            .filter((phaseIndex) => phaseIndex !== -1)
+            .map((phaseIndex) => ({ resource, phaseId: createdPhases[phaseIndex].id }))
+        )
+
+        await Promise.all(
+          assignments.map(async ({ resource, phaseId }) => {
+            const assignmentResponse = await postJson(
+              `/api/phases/${encodeURIComponent(phaseId)}/resources`,
+              { resourceType: resource.resourceType, resourceId: resource.id }
+            )
+
+            if (!assignmentResponse.ok) {
+              const message = await readError(assignmentResponse, assignmentResponse.statusText)
+              throw new Error(`Assigning ${resource.name} failed: ${message}.`)
+            }
+          })
+        )
+      } catch (assignmentError) {
+        const undo = await fetch(`/api/projects/${encodeURIComponent(createdProject.id)}`, {
+          method: 'DELETE',
+        }).catch(() => null)
+
+        throw new Error(
+          undo?.ok
+            ? `${assignmentError.message} Nothing was saved, so you can try again.`
+            : `${assignmentError.message} Project ${createdProject.id} was created but could not be removed automatically. Delete it before retrying.`
+        )
       }
 
       // 3. Refresh dashboard data.
@@ -925,6 +864,9 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
           No overlapping assignments were found for the selected resources.
         </div>
       )}
+
+      {/* Save errors are set while on this step, so show them here too */}
+      {error && <div className="ap-error" role="alert">{error}</div>}
     </>
   )
 

@@ -189,6 +189,7 @@ function App() {
             error={error}
           />
           <AddProject
+              data={data}
               onSaved={refreshData}
               onPreviewChange={setWhatIfPreview}
           />
