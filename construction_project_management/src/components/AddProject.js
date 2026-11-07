@@ -6,7 +6,6 @@ const PHASE_COLORS = ['#F59E0B', '#2563EB', '#16A34A', '#7C3AED', '#EC4899']
 
 const START_PHASES = [
   { id: 1, name: 'Phase 1', start: '', end: '' },
-  { id: 2, name: 'Phase 2', start: '', end: '' },
 ]
 
 const STEP_LABELS = ['1 Details', '2 Resources', '3 Review']
@@ -35,7 +34,7 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
   const [projectStart, setProjectStart] = useState('')
   const [projectEnd, setProjectEnd] = useState('')  
   const [phases, setPhases] = useState(START_PHASES)
-  const [nextId, setNextId] = useState(3)
+  const [nextId, setNextId] = useState(2)
   const [assigned, setAssigned] = useState({})
   const [resources, setResources] = useState([])
   const [workerSchedules, setWorkerSchedules] = useState({})
@@ -177,7 +176,7 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
   setProjectStart('')
   setProjectEnd('')
   setPhases(START_PHASES)
-  setNextId(3)
+  setNextId(2)
   setAssigned({})
   setSearchTerm('')
   setTab('People')
