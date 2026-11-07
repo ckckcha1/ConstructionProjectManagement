@@ -182,9 +182,16 @@
 .ap-status.green { background: #16a34a; }
 .ap-status.red { background: #ef4444; }
 .ap-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Phase chips use the what-if purple (variables in App.css): outlined when off,
+   filled purple like the what-if phase bars in the Gantt when on */
 .ap-chip {
-  height: 22px; padding: 0 12px; border: 1px solid #2563eb; border-radius: 11px;
-  background: #fff; font: inherit; font-size: 10px; font-weight: 700; color: #2563eb; cursor: pointer;
+  height: 22px; padding: 0 12px; border: 1px solid var(--what-if-stroke); border-radius: 11px;
+  background: #fff; font: inherit; font-size: 10px; font-weight: 700; color: #374151; cursor: pointer;
+}
+.ap-chip.is-on {
+  background-color: var(--what-if-fill);
+  border-style: dashed;
+  color: #111827;
 }
 .ap-chip.conflict { background: #ef4444; border-color: #ef4444; color: #fff; }
 .ap-warn { margin-top: 8px; font-size: 10px; font-weight: 700; color: #b91c1c; }

@@ -1,5 +1,10 @@
 /* Global styles shared by every component */
 :root {
+  /* What-if project phases: purple, shared by the Gantt phase bars
+     (GanttChart.css) and the phase chips in Add project (AddProject.css) */
+  --what-if-fill: #c4b5fd;
+  --what-if-stroke: #7c3aed;
+
   --bg: #F4F5F7;
   --panel: #FFFFFF;
   --border: #E3E6EA;

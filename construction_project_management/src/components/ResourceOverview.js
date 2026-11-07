@@ -6,6 +6,20 @@ import { formatDate, overlaps } from '../data';
 
 const formatShort = d3.timeFormat('%b %-d');
 
+// What-if resource bars match the status dots in Add project: red when the resource
+// already has an overlapping assignment, green when it's free, grey while still checking.
+// color is the bar fill (GanttChart.css adds the matching dashed border per status).
+const WHAT_IF_STATUS = {
+  conflict: { color: '#fecaca', text: 'Conflicts with an existing assignment' },
+  clear: { color: '#bbf7d0', text: 'No conflict with existing assignments' },
+  checking: { color: '#e5e7eb', text: 'Checking existing schedule…' },
+};
+
+const whatIfStatusOf = (assignment) => {
+  if (!assignment.conflictChecked) return 'checking';
+  return assignment.isConflict ? 'conflict' : 'clear';
+};
+
 const quantityText = (quantity) => (quantity == null ? '—' : quantity.toLocaleString('en-US'));
 
 // details: extra tooltip lines about the resource itself, shown above the assignment lines
@@ -147,7 +161,7 @@ for (const assignments of allAssignmentsByResource.values()) {
       key: 'what-if-preview',
       title: whatIfPreview.name || 'New project',
       meta: whatIfPreview.place || 'Proposed project',
-      swatch: '#7c3aed',
+      swatch: '#7c3aed', // purple, matching the phase bars (--what-if-stroke in App.css)
       selected: false,
       bars:
      whatIfPreview.phases
@@ -167,8 +181,9 @@ for (const assignments of allAssignmentsByResource.values()) {
     key: `what-if-phase-${phase.id ?? index}`,
     start: new Date(`${phase.start}T00:00:00`),
     end: new Date(`${phase.end}T00:00:00`),
-    color: '#c4b5fd',
+    color: '#c4b5fd', // --what-if-fill in App.css
     isPreview: true,
+    previewStatus: 'phase',
     label: phase.name || `Phase ${index + 1}`,
     tooltip: {
       title: `${whatIfPreview.name || 'New project'} — ${phase.name || `Phase ${index + 1}`}`,
@@ -258,22 +273,27 @@ for (const group of RESOURCE_GROUPS) {
   // Temporary What-if resource assignment bars
 ...(previewAssignmentsByResource.get(
   `${PREVIEW_RESOURCE_TYPES[group.type]}:${resource.id}`
-) ?? []).map((assignment) => ({
-  key: `preview-${assignment.resourceType}-${assignment.resourceId}-${assignment.phaseId}`,
-  start: previewDate(assignment.startDate),
-  end: previewDate(assignment.endDate),
-  color: '#c4b5fd',
-  isPreview: true,
-  label: assignment.phaseName || 'What-if',
-  tooltip: {
-    title: `${whatIfPreview?.name || 'New project'} — ${assignment.phaseName || 'Phase'}`,
-    lines: [
-      group.label(resource),
-      `${assignment.startDate} – ${assignment.endDate}`,
-      'Temporary resource assignment',
-    ],
-  },
-})),
+) ?? []).map((assignment) => {
+  const status = whatIfStatusOf(assignment);
+  return {
+    key: `preview-${assignment.resourceType}-${assignment.resourceId}-${assignment.phaseId}`,
+    start: previewDate(assignment.startDate),
+    end: previewDate(assignment.endDate),
+    color: WHAT_IF_STATUS[status].color,
+    isPreview: true,
+    previewStatus: status,
+    label: assignment.phaseName || 'What-if',
+    tooltip: {
+      title: `${whatIfPreview?.name || 'New project'} — ${assignment.phaseName || 'Phase'}`,
+      lines: [
+        group.label(resource),
+        `${assignment.startDate} – ${assignment.endDate}`,
+        WHAT_IF_STATUS[status].text,
+        'Temporary resource assignment',
+      ],
+    },
+  };
+}),
   
 ],
       });
@@ -380,6 +400,7 @@ function ResourceOverview({
               today={today}
               labelHeader="Project"
               rows={projectRows}
+              focusPreview={Boolean(whatIfPreview)}
               emptyMessage={projectsEmpty}
               scrollRef={projectsScrollRef}
               onScroll={() => syncScroll(projectsScrollRef, resourcesScrollRef)}
@@ -398,6 +419,7 @@ function ResourceOverview({
               today={today}
               labelHeader="Resource"
               rows={resourceRows}
+              focusPreview={Boolean(whatIfPreview)}
               emptyMessage={resourcesEmpty}
               scrollRef={resourcesScrollRef}
               onScroll={() => syncScroll(resourcesScrollRef, projectsScrollRef)}

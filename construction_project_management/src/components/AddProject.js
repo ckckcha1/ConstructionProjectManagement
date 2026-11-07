@@ -318,6 +318,8 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
         startDate: start.toISOString().split('T')[0],
         endDate: end.toISOString().split('T')[0],
         isConflict: hasResourceConflict(resource),
+        // False until existing schedules load; the Gantt shows the bar as "checking" until then
+        conflictChecked: schedulesLoaded,
       }]
     })
   })
@@ -350,6 +352,7 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
   assigned,
   resources,
   workerSchedules,
+  schedulesLoaded,
   parsePhaseDate,
   hasResourceConflict,
   onPreviewChange,
@@ -737,20 +740,13 @@ export default function AddProject({ initialStep = 0, onSaved, onPreviewChange }
           {phases.map((p) => {
             const on = mine.includes(p.id)
 
-            const style = on
-              ? {
-                  background: colorOf(p.id),
-                  borderColor: colorOf(p.id),
-                  color: '#fff',
-                }
-              : {}
-
+            // Selected chips use the purple of the what-if phase bars (AddProject.css)
             return (
               <button
                 type="button"
                 key={p.id}
-                className="ap-chip"
-                style={style}
+                className={`ap-chip${on ? ' is-on' : ''}`}
+                aria-pressed={on}
                 onClick={() => toggleChip(resource, p.id)}
               >
                 {p.name}
