@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import Header from './components/Header';
 import Filters from './components/Filters';
@@ -6,15 +6,7 @@ import ResourceOverview from './components/ResourceOverview';
 import ProjectSites from './components/ProjectSites';
 import ProjectDetails from './components/ProjectDetails';
 import AddProject from './components/AddProject';
-import { TODAY, addMonths, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
-
-// 3 months with today near the middle (starts 1.5 months back).
-// end = addMonths(start, 3) so the "3 months" quick-range button shows as active.
-const defaultRange = () => {
-  const monthBack = addMonths(TODAY, -1);
-  const start = new Date(monthBack.getFullYear(), monthBack.getMonth(), monthBack.getDate() - 15);
-  return { start, end: addMonths(start, 3) };
-};
+import { TODAY, getDefaultDateRange, getDefaultProject, getPeriodSummary, getResourcesInRange, isProjectVisible, loadData,} from './data';
 
 // Stores the UNCHECKED items, so anything new that appears when the range
 // changes starts out checked.
@@ -30,7 +22,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [dateRange, setDateRange] = useState(defaultRange);
+  const [dateRange, setDateRange] = useState(() => getDefaultDateRange(TODAY));
   const [searchQuery, setSearchQuery] = useState('');
   const [excludedIds, setExcludedIds] = useState(emptyExclusions);
   // Set by clicking a project in ResourceOverview (Gantt) or ProjectSites (map or Locations list).
@@ -81,14 +73,29 @@ function App() {
 
   const summary = useMemo(() => getPeriodSummary(inRange), [inRange]);
 
-  // The filter panel lists every project, not just the ones in the date range
-  const allProjects = useMemo(
+  // The filter panel lists ongoing and upcoming projects (isProjectVisible), earliest start first
+  const listedProjects = useMemo(
     () =>
       data
-        ? [...data.projects].sort((a, b) => a.startDate - b.startDate || a.id.localeCompare(b.id))
+        ? data.projects
+            .filter((p) => isProjectVisible(p, dateRange.start))
+            .sort((a, b) => a.startDate - b.startDate || a.id.localeCompare(b.id))
         : [],
-    [data]
+    [data, dateRange.start]
   );
+
+  // A project that drops out of the list is unchecked, so it comes back unchecked if a later range change lists it again
+  const prevListedIds = useRef(null);
+  useEffect(() => {
+    if (!data) return;
+    const ids = new Set(listedProjects.map((p) => p.id));
+    const dropped = prevListedIds.current
+      ? [...prevListedIds.current].filter((id) => !ids.has(id))
+      : [];
+    prevListedIds.current = ids;
+    if (dropped.length === 0) return;
+    setExcludedIds((prev) => ({ ...prev, projects: new Set([...prev.projects, ...dropped]) }));
+  }, [data, listedProjects]);
 
   // Projects in the date range that are checked in the filter panel,
   // the same projects the project Gantt chart shows
@@ -131,7 +138,7 @@ function App() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setDateRange(defaultRange());
+    setDateRange(getDefaultDateRange(TODAY));
     setSearchQuery('');
     setExcludedIds(emptyExclusions());
   }, []);
@@ -147,7 +154,7 @@ function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           inRange={inRange}
-          allProjects={allProjects}
+          listedProjects={listedProjects}
           excludedIds={excludedIds}
           onToggle={handleToggle}
           onSetGroup={handleSetGroup}

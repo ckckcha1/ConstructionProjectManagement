@@ -70,8 +70,20 @@ export async function loadData() {
     startDate: parseDate(row.startDate),
     endDate: parseDate(row.endDate),
   });
-  const projects = rawProjects.map(withDates);
   const phases = rawPhases.map(withDates);
+
+  // lastActiveDate: the project's last day of work, its end date or its latest phase end, whichever is later
+  // Null (no usable end date at all) means the project counts as ongoing
+  const lastPhaseEnd = d3.rollup(
+    phases.filter((ph) => ph.endDate),
+    (v) => d3.max(v, (ph) => ph.endDate),
+    (ph) => ph.projectId
+  );
+  const projects = rawProjects.map((row) => {
+    const project = withDates(row);
+    const ends = [project.endDate, lastPhaseEnd.get(project.id)].filter(Boolean);
+    return { ...project, lastActiveDate: ends.length ? d3.max(ends) : null };
+  });
 
   const projectsById = byId(projects);
   const workersById = byId(workers);
@@ -84,6 +96,14 @@ export async function loadData() {
     if (p.startDate && p.year !== p.startDate.getFullYear()) {
       console.warn(
         `Project ${p.id} Year (${p.year}) doesn't match its start date year (${p.startDate.getFullYear()})`,
+        p
+      );
+    }
+    if (!p.endDate) {
+      console.warn(
+        p.lastActiveDate
+          ? `Project ${p.id} has no end date, using its latest phase end`
+          : `Project ${p.id} has no end date or dated phases, treated as ongoing`,
         p
       );
     }
@@ -117,6 +137,22 @@ export function addMonths(date, n) {
   const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
   target.setDate(Math.min(date.getDate(), lastDay));
   return target;
+}
+
+// Default filter range
+// a week(7 days) before today, ends 2 calendar months later
+// quick select end month period to be 2 motbs 
+export function getDefaultDateRange(today) {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+  return { start, end: addMonths(start, 2) };
+}
+
+// Filter bar rule: 
+// a project is listed while it's still active on or after the range start,
+// so ongoing and upcoming projects show and ones that ended before the range don't
+// No end date at all = ongoing, always listed.
+export function isProjectVisible(project, rangeStart) {
+  return !project.lastActiveDate || startOfDay(project.lastActiveDate) >= startOfDay(rangeStart);
 }
 
 // Inclusive on both ends
