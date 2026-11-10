@@ -22,6 +22,7 @@ const GROUPS = [
     type: 'projects',
     title: 'Projects',
     noun: 'projects',
+    empty: 'No active or upcoming projects for this date range',
     label: (p) => p.name,
     meta: (p) => `${p.id}`,
     color: (p, colors) => colors?.get(p.id),
@@ -110,7 +111,7 @@ function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, 
         <div id={listId}>
           {items.length === 0 ? (
             <p className="filters-muted filter-empty">
-              {searching ? 'No matches' : `No ${group.noun} in this period`}
+              {searching ? 'No matches' : group.empty ?? `No ${group.noun} in this period`}
             </p>
           ) : (
             <ul className="filter-list">
@@ -164,7 +165,7 @@ function Filters({
   searchQuery,
   onSearchChange,
   inRange,
-  allProjects,
+  listedProjects,
   excludedIds,
   onToggle,
   onSetGroup,
@@ -175,12 +176,12 @@ function Filters({
 }) {
   const { start, end } = dateRange;
 
-  // Projects list every project, the other groups only what's in the date range.
-  // Projects in the range come first (stable sort keeps start-date order within each part).
+  // Projects list ONLY ongoing and upcoming projects 
+  // sorted by start date in App,
+  // upcoming projects with no phase in the range are marked and showed as "outside date range".
   const inRangeProjectIds = new Set(inRange.projects.map((p) => p.id));
   const isOutsideRange = (project) => !inRangeProjectIds.has(project.id);
-  const projects = [...allProjects].sort((a, b) => isOutsideRange(a) - isOutsideRange(b));
-  const itemsFor = (type) => (type === 'projects' ? projects : inRange[type]);
+  const itemsFor = (type) => (type === 'projects' ? listedProjects : inRange[type]);
   const query = searchQuery.trim().toLowerCase();
   const searching = query !== '';
 
