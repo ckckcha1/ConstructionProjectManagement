@@ -6,15 +6,7 @@ import ResourceOverview from './components/ResourceOverview';
 import ProjectSites from './components/ProjectSites';
 import ProjectDetails from './components/ProjectDetails';
 import AddProject from './components/AddProject';
-import { TODAY, addMonths, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
-
-// 3 months with today near the middle (starts 1.5 months back).
-// end = addMonths(start, 3) so the "3 months" quick-range button shows as active.
-const defaultRange = () => {
-  const monthBack = addMonths(TODAY, -1);
-  const start = new Date(monthBack.getFullYear(), monthBack.getMonth(), monthBack.getDate() - 15);
-  return { start, end: addMonths(start, 3) };
-};
+import { TODAY, getDefaultDateRange, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
 
 // Stores the UNCHECKED items, so anything new that appears when the range
 // changes starts out checked.
@@ -30,7 +22,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [dateRange, setDateRange] = useState(defaultRange);
+  const [dateRange, setDateRange] = useState(() => getDefaultDateRange(TODAY));
   const [searchQuery, setSearchQuery] = useState('');
   const [excludedIds, setExcludedIds] = useState(emptyExclusions);
   // Set by clicking a project in ResourceOverview (Gantt) or ProjectSites (map or Locations list).
@@ -131,7 +123,7 @@ function App() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setDateRange(defaultRange());
+    setDateRange(getDefaultDateRange(TODAY));
     setSearchQuery('');
     setExcludedIds(emptyExclusions());
   }, []);

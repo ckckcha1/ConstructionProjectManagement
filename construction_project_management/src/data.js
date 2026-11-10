@@ -119,6 +119,14 @@ export function addMonths(date, n) {
   return target;
 }
 
+// Default filter range
+// a week(7 days) before today, ends 2 calendar months later
+// quick select end month period to be 2 motbs 
+export function getDefaultDateRange(today) {
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+  return { start, end: addMonths(start, 2) };
+}
+
 // Inclusive on both ends
 export function overlaps(start, end, rangeStart, rangeEnd) {
   return start <= rangeEnd && end >= rangeStart;
