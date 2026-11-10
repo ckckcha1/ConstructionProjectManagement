@@ -6,12 +6,12 @@ import ResourceOverview from './components/ResourceOverview';
 import ProjectSites from './components/ProjectSites';
 import ProjectDetails from './components/ProjectDetails';
 import AddProject from './components/AddProject';
-import { DEMO_TODAY, addMonths, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
+import { TODAY, addMonths, getDefaultProject, getPeriodSummary, getResourcesInRange, loadData,} from './data';
 
 // 3 months with today near the middle (starts 1.5 months back).
 // end = addMonths(start, 3) so the "3 months" quick-range button shows as active.
 const defaultRange = () => {
-  const monthBack = addMonths(DEMO_TODAY, -1);
+  const monthBack = addMonths(TODAY, -1);
   const start = new Date(monthBack.getFullYear(), monthBack.getMonth(), monthBack.getDate() - 15);
   return { start, end: addMonths(start, 3) };
 };
@@ -138,7 +138,7 @@ function App() {
 
   return (
     <div className="app">
-      <Header today={DEMO_TODAY} summary={summary} dateRange={dateRange} loading={loading} />
+      <Header today={TODAY} summary={summary} dateRange={dateRange} loading={loading} />
 
       <main className="app-body">
         <Filters
@@ -164,7 +164,7 @@ function App() {
             inRange={inRange}
             excludedIds={excludedIds}
             dateRange={dateRange}
-            today={DEMO_TODAY}
+            today={TODAY}
             loading={loading}
             error={error}
             selectedProjectId={displayedProject?.id ?? null}

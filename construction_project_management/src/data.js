@@ -3,10 +3,10 @@ import * as d3 from 'd3';
 // Part that handles all the data process
 // Data comes from the Express + PostgreSQL backend in /server
 
-// HARD CODED VALUE for the demo on Prototype demo Monday
-// Decent data point to use as it has 3 project that overlap on this day period
-// NEED TO replace with new Date() for live data later!!!
-export const DEMO_TODAY = new Date(2026, 5, 10);
+// Today's date in the user's local time zone (time stripped to midnight)
+const now = new Date();
+// export const DEMO_TODAY = new Date(2026, 5, 10);
+export const TODAY = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
 // The API sends dates as 'YYYY-MM-DD' strings
 const parseDate = d3.timeParse('%Y-%m-%d');
