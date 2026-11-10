@@ -360,3 +360,80 @@
   line-height: 17px;
   color: var(--muted);
 }
+
+/* Conflict highlighting for resource assignments */
+/* Conflict warning banner */
+.gantt-bar.is-conflict {
+  outline: 1.5px solid #dc2626;
+  outline-offset: 1px;
+  overflow: visible;
+  z-index: 3;
+}
+
+.gantt-conflict-banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -15px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 3px 3px 0 0;
+  z-index: 4;
+}
+
+/* What-if proposed assignment bars */
+.gantt-bar.is-preview {
+  background: #c4b5fd !important;
+  border: 2px dashed #7c3aed !important;
+  box-sizing: border-box;
+  opacity: 0.9;
+}
+
+/* What-if resource bars take the status color from Add project's conflict check
+   (same red / green as its status dots; grey while schedules are still loading) */
+.gantt-bar.is-preview.is-preview-conflict {
+  background: #fecaca !important;
+  border-color: #ef4444 !important;
+}
+
+.gantt-bar.is-preview.is-preview-clear {
+  background: #bbf7d0 !important;
+  border-color: #16a34a !important;
+}
+
+/* What-if project phases on the project timeline: purple (variables in App.css) */
+.gantt-bar.is-preview.is-preview-phase {
+  background: var(--what-if-fill) !important;
+  border-color: var(--what-if-stroke) !important;
+}
+
+.gantt-bar.is-preview.is-preview-checking {
+  background: #e5e7eb !important;
+  border-color: #9ca3af !important;
+}
+
+/* What-if mode: saved projects fade back so the new project is the focus.
+   Saved bars that overlap a what-if bar in the same resource row stay at full strength,
+   because they compete with the new project for that resource. */
+.gantt-scroll.is-what-if .gantt-bar:not(.is-preview):not(.overlaps-preview) {
+  opacity: 0.3;
+  filter: grayscale(0.6);
+  transition: opacity 0.15s, filter 0.15s;
+}
+
+/* A dimmed bar comes back to full color while hovered or focused, so it stays readable */
+.gantt-scroll.is-what-if .gantt-bar:not(.is-preview):not(.overlaps-preview):hover,
+.gantt-scroll.is-what-if .gantt-bar:not(.is-preview):not(.overlaps-preview):focus-visible {
+  opacity: 1;
+  filter: none;
+}

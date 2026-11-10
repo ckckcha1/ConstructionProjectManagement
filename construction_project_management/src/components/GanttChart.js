@@ -59,7 +59,7 @@ function segments(interval, timeline) {
 // Puts bars in lanes so overlapping bars don't cover each other.
 // A bar starting the day the previous one ends (a handoff) stays in the same lane,
 // and the later bar gets the shared day.
-function layoutBars(bars, timeline) {
+function packLanes(bars) {
   const sorted = [...bars].sort((a, b) => a.start - b.start || a.end - b.end);
   const laneEnds = [];
   const lanes = [];
@@ -69,6 +69,16 @@ function layoutBars(bars, timeline) {
     laneEnds[lane] = bar.end;
     (lanes[lane] ??= []).push(bar);
   }
+  return lanes;
+}
+
+function layoutBars(bars, timeline) {
+  // What-if preview bars always go in lanes below the saved bars, so the conflict
+  // banner drawn above a saved bar never covers a preview bar
+  const lanes = [
+    ...packLanes(bars.filter((bar) => !bar.isPreview)),
+    ...packLanes(bars.filter((bar) => bar.isPreview)),
+  ];
 
   const placed = [];
   lanes.forEach((laneBars, lane) => {
@@ -153,7 +163,8 @@ function Tooltip({ tooltip }) {
   );
 }
 
-function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRef, onScroll, ariaLabel }) {
+// focusPreview: a what-if project is being built, so saved bars are dimmed to make it stand out
+function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMessage, scrollRef, onScroll, ariaLabel }) {
   const [tooltip, setTooltip] = useState(null);
 
   const months = useMemo(() => segments(d3.timeMonth, timeline), [timeline]);
@@ -167,7 +178,19 @@ function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRe
         const contentHeight = laneCount * (BAR_HEIGHT + LANE_GAP) - LANE_GAP;
         const height = Math.max(MIN_ROW_HEIGHT, contentHeight + 2 * ROW_PADDING_Y);
         const top = (height - contentHeight) / 2;
-        return { ...row, height, bars: bars.map((bar) => ({ ...bar, top: top + bar.lane * (BAR_HEIGHT + LANE_GAP) })) };
+        // Saved bars overlapping a what-if bar in this row compete with the new project
+        // for this resource, so they stay undimmed in what-if mode
+        const previews = bars.filter((bar) => bar.isPreview);
+        return {
+          ...row,
+          height,
+          bars: bars.map((bar) => ({
+            ...bar,
+            top: top + bar.lane * (BAR_HEIGHT + LANE_GAP),
+            overlapsPreview:
+              !bar.isPreview && previews.some((p) => bar.start <= p.end && p.start <= bar.end),
+          })),
+        };
       }),
     [rows, timeline]
   );
@@ -181,7 +204,7 @@ function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRe
 
   return (
     <div
-      className="gantt-scroll"
+      className={`gantt-scroll${focusPreview ? ' is-what-if' : ''}`}
       ref={scrollRef}
       onScroll={() => {
         hideTooltip();
@@ -258,8 +281,12 @@ function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRe
                     const showLabel = textWidth(bar.label) + 2 * BAR_LABEL_PADDING <= bar.width;
                     const className = [
                       'gantt-bar',
+                      bar.isPreview && 'is-preview',
+                      bar.previewStatus && `is-preview-${bar.previewStatus}`,
+                      bar.overlapsPreview && 'overlaps-preview',
                       bar.clippedStart && 'is-clipped-start',
                       bar.clippedEnd && 'is-clipped-end',
+                      bar.isConflict && 'is-conflict',
                     ]
                       .filter(Boolean)
                       .join(' ');
@@ -286,6 +313,11 @@ function GanttChart({ timeline, today, labelHeader, rows, emptyMessage, scrollRe
                         }}
                         onBlur={hideTooltip}
                       >
+                        {bar.isConflict && (
+                            <span className="gantt-conflict-banner">
+                                ⚠ Phase 1 — Conflict
+                            </span>
+                        )}
                         {showLabel && <span className="gantt-bar-label">{bar.label}</span>}
                       </button>
                     );
