@@ -357,6 +357,34 @@ export default function AddProject({ initialStep = 0, data, onSaved, onPreviewCh
     goTo(3)
   }
 
+  const resourceTabIndex = TABS.indexOf(tab)
+
+const goToResourceTab = (nextTab) => {
+  setTab(nextTab)
+  setSearchTerm('')
+  setError('')
+
+  if (bodyRef.current) {
+    bodyRef.current.scrollTop = 0
+  }
+}
+
+const nextResourceTab = () => {
+  if (resourceTabIndex < TABS.length - 1) {
+    goToResourceTab(TABS[resourceTabIndex + 1])
+  } else {
+    nextFromResources()
+  }
+}
+
+const previousResourceTab = () => {
+  if (resourceTabIndex > 0) {
+    goToResourceTab(TABS[resourceTabIndex - 1])
+  } else {
+    goTo(1)
+  }
+}
+
   // ---------- Save project and assignments ----------
 
 
@@ -736,7 +764,7 @@ export default function AddProject({ initialStep = 0, data, onSaved, onPreviewCh
               type="button"
               key={t}
               className={'ap-tab' + (tab === t ? ' active' : '')}
-              onClick={() => setTab(t)}
+              onClick={() => goToResourceTab(t)}
             >
               {t}
             </button>
@@ -900,27 +928,31 @@ export default function AddProject({ initialStep = 0, data, onSaved, onPreviewCh
     }
 
     if (step === 2) {
-      return (
-        <div className="ap-btn-row">
-          <button
-            type="button"
-            className="ap-btn ghost"
-            onClick={back}
-          >
-            Back
-          </button>
+  return (
+    <div className="ap-btn-row">
+      <button
+        type="button"
+        className="ap-btn ghost"
+        onClick={previousResourceTab}
+      >
+        {resourceTabIndex === 0
+          ? 'Back: details'
+          : `Back: ${TABS[resourceTabIndex - 1].toLowerCase()}`}
+      </button>
 
-          <button
-            type="button"
-            className="ap-btn primary grow"
-            onClick={nextFromResources}
-            disabled={!schedulesLoaded}
-          >
-            Next: review
-          </button>
-        </div>
-      )
-    }
+      <button
+        type="button"
+        className="ap-btn primary grow"
+        onClick={nextResourceTab}
+        disabled={resourceTabIndex === TABS.length - 1 && !schedulesLoaded}
+      >
+        {resourceTabIndex === TABS.length - 1
+          ? 'Next: review'
+          : `Next: ${TABS[resourceTabIndex + 1].toLowerCase()}`}
+      </button>
+    </div>
+  )
+}
 
     const hasConflict = conflictRows.length > 0
 
