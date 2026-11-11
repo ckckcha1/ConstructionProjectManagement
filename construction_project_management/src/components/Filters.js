@@ -162,6 +162,8 @@ function FilterGroup({ group, items, totalCount, excluded, searching, onToggle, 
 function Filters({
   dateRange,
   onDateRangeChange,
+  onResetRange,
+  isDefaultRange,
   searchQuery,
   onSearchChange,
   inRange,
@@ -251,8 +253,20 @@ function Filters({
       </div>
 
       <section className="filters-dates" aria-labelledby="filters-dates-title">
-        <div id="filters-dates-title" className="label-caps filters-section-title">
-          Date range
+        <div className="filters-dates-header">
+          <div id="filters-dates-title" className="label-caps filters-section-title">
+            Date range
+          </div>
+          {/* Back to the starting view around today; only the dates, not the other filters */}
+          <button
+            type="button"
+            className="text-button"
+            disabled={isDefaultRange}
+            onClick={onResetRange}
+            title="Show the default range around today"
+          >
+            Reset to today
+          </button>
         </div>
 
         <div className="date-inputs">

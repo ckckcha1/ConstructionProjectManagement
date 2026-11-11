@@ -66,7 +66,7 @@ const phaseDates = (phase) =>
 
 // Rows for both charts, from the projects and resources checked in the filter panel.
 // Bars are the phases that overlap the date range; a resource gets one bar per phase it's assigned to.
-function buildRows({ data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, expandOverrides, onSelectProject, onToggleGroup, onToggleProjectExpand, selectedProjectId }) {
+function buildRows({ data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, expandOverrides, onSelectProject, onToggleGroup, onToggleProjectExpand, onFitToRange, selectedProjectId }) {
   const projects = inRange.projects.filter((p) => !excludedIds.projects.has(p.id));
   const projectIds = new Set(projects.map((p) => p.id));
   const colorOf = (projectId) => data.projectColorById.get(projectId);
@@ -162,6 +162,30 @@ for (const assignments of allAssignmentsByResource.values()) {
 
   const singleProjectView = projects.length === 1 && !whatIfPreview;
 
+  // Fit button on a project row: sets the date range to the project's whole timeline.
+  // fitActive marks the row whose timeline the range is currently fitted to.
+  const fitProps = (start, end, projectId) => {
+    if (!start || !end || !onFitToRange) return {};
+    return {
+      onFit: () => onFitToRange(start, end, projectId),
+      fitTitle: `Fit the timeline to this project (${formatDate(start)} – ${formatDate(end)})`,
+      fitActive:
+        Boolean(dateRange.fit) &&
+        +dateRange.start === +d3.timeDay.floor(start) &&
+        +dateRange.end === +d3.timeDay.floor(end),
+    };
+  };
+
+  // A project's whole timeline: earliest to latest date of the project and all its
+  // phases (not just the phases in the current range)
+  const allPhasesByProject = d3.group(data.phases, (ph) => ph.projectId);
+  const projectSpan = (project) => {
+    const dates = [project, ...(allPhasesByProject.get(project.id) ?? [])]
+      .flatMap((d) => [d.startDate, d.endDate])
+      .filter(Boolean);
+    return [d3.min(dates), d3.max(dates)];
+  };
+
   const projectRows = projects.map((project) => {
     const expanded = isExpanded(project.id, singleProjectView);
     const resourceCount = plural(resourcesPerProject.get(project.id) ?? 0, 'resource');
@@ -175,6 +199,7 @@ for (const assignments of allAssignmentsByResource.values()) {
       swatch: colorOf(project.id),
       selected: project.id === selectedProjectId,
       onClick: () => onSelectProject(project.id),
+      ...fitProps(...projectSpan(project), project.id),
       summaryBar: {
         key: `${project.id}-summary`,
         start: project.startDate,
@@ -235,6 +260,7 @@ for (const assignments of allAssignmentsByResource.values()) {
         meta: whatIfPreview.place || 'Proposed project',
         swatch: '#7c3aed', // purple, matching the phase bars (--what-if-stroke in App.css)
         selected: false,
+        ...(hasSpan ? fitProps(spanStart, spanEnd, null) : {}),
         summaryBar: hasSpan
           ? {
               key: 'what-if-summary',
@@ -388,6 +414,7 @@ function ResourceOverview({
   error,
   selectedProjectId,
   onSelectProject,
+  onFitToRange,
 }) {
   const projectsScrollRef = useRef(null);
   const resourcesScrollRef = useRef(null);
@@ -440,7 +467,7 @@ function ResourceOverview({
   }, []);
 
   const timeline = useMemo(
-    () => buildTimeline(dateRange.start, dateRange.end, availableWidth),
+    () => buildTimeline(dateRange.start, dateRange.end, availableWidth, { fit: dateRange.fit }),
     [dateRange, availableWidth]
   );
 
@@ -471,10 +498,11 @@ function ResourceOverview({
             onSelectProject,
             onToggleGroup: toggleGroup,
             onToggleProjectExpand: toggleProjectExpand,
+            onFitToRange,
             selectedProjectId,
           })
         : { projectRows: [], resourceRows: [] },
-    [data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, expandOverrides, onSelectProject, toggleGroup, toggleProjectExpand, selectedProjectId]
+    [data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, expandOverrides, onSelectProject, toggleGroup, toggleProjectExpand, onFitToRange, selectedProjectId]
   );
 
   let projectsEmpty = 'No projects selected in this period.';

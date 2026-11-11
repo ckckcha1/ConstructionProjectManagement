@@ -10,6 +10,10 @@ export const LABEL_WIDTH = 200;
 
 // Days never get narrower than this, longer ranges scroll horizontally instead
 const MIN_DAY_WIDTH = 8;
+// When fitting to a project, days can get this narrow (a multi-year project still fits)
+const MIN_FIT_DAY_WIDTH = 0.25;
+// Narrower weeks than this get no week header cells or week gridlines, only months
+const MIN_WEEK_CELL_WIDTH = 14;
 const BAR_HEIGHT = 20;
 const LANE_GAP = 4;
 const MIN_ROW_HEIGHT = 40;
@@ -34,13 +38,15 @@ function monthLabel(segment) {
 const formatWeek = d3.timeFormat('%d %b');
 
 // Shared x-axis for both charts. end is inclusive (the last day shown).
-// Days stretch to fill availableWidth, but never below MIN_DAY_WIDTH.
-export function buildTimeline(start, end, availableWidth) {
+// Days stretch to fill availableWidth, but never below MIN_DAY_WIDTH, unless fit is
+// true (fitting the charts to a project), where days shrink so the whole range fits.
+export function buildTimeline(start, end, availableWidth, { fit = false } = {}) {
   const first = d3.timeDay.floor(start);
   const stop = d3.timeDay.offset(d3.timeDay.floor(end), 1);
   const days = Math.max(1, d3.timeDay.count(first, stop));
+  const minDayWidth = fit ? MIN_FIT_DAY_WIDTH : MIN_DAY_WIDTH;
   // Rounded down so a range that fits never overflows by a fraction of a pixel
-  const dayWidth = Math.max(MIN_DAY_WIDTH, Math.floor((availableWidth / days) * 100) / 100);
+  const dayWidth = Math.max(minDayWidth, Math.floor((availableWidth / days) * 100) / 100);
   // Counting days (not ms) keeps every day the same width across daylight-saving changes
   const x = (date) => d3.timeDay.count(first, date) * dayWidth;
   return { start: first, stop, dayWidth, width: days * dayWidth, x };
@@ -174,6 +180,9 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
 
   const months = useMemo(() => segments(d3.timeMonth, timeline), [timeline]);
   const weeks = useMemo(() => segments(d3.timeMonday, timeline), [timeline]);
+  // A long range fitted into the view makes weeks too narrow to show; months only then
+  const showWeeks = timeline.dayWidth * 7 >= MIN_WEEK_CELL_WIDTH;
+  const gridSegments = showWeeks ? weeks : months;
 
   const laidOutRows = useMemo(
     () =>
@@ -234,7 +243,7 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
               ))}
             </div>
             <div className="gantt-weeks">
-              {weeks.map((w) => {
+              {showWeeks && weeks.map((w) => {
                 const current = showToday && todayX >= w.left && todayX < w.left + w.width;
                 return (
                   <div
@@ -252,7 +261,7 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
 
         <div className="gantt-body">
           <svg className="gantt-grid" style={{ left: LABEL_WIDTH, width: timeline.width }} aria-hidden="true">
-            {weeks.slice(1).map((w) => (
+            {gridSegments.slice(1).map((w) => (
               <line key={+w.from} x1={w.left + 0.5} x2={w.left + 0.5} y1="0" y2="100%" />
             ))}
           </svg>
@@ -363,6 +372,33 @@ function ExpandToggle({ row }) {
   );
 }
 
+// Button that fits the charts' date range to this project's whole timeline
+function FitButton({ row }) {
+  if (!row.onFit) return null;
+  return (
+    <button
+      type="button"
+      className={`gantt-fit${row.fitActive ? ' is-active' : ''}`}
+      aria-pressed={Boolean(row.fitActive)}
+      aria-label={`Fit the timeline to ${row.title}`}
+      title={row.fitTitle ?? 'Fit the timeline to this project'}
+      onClick={row.onFit}
+    >
+      {/* |←→| : stretch to fit */}
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
+        <path
+          d="M2 3v10M14 3v10M4.5 8h7M6.5 5.5 4 8l2.5 2.5M9.5 5.5 12 8l-2.5 2.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
 function RowLabel({ row }) {
   const swatch = row.swatch && (
     <span className="gantt-swatch" style={{ background: row.swatch }} aria-hidden="true" />
@@ -385,6 +421,7 @@ function RowLabel({ row }) {
               {row.title}
             </span>
           </Main>
+          <FitButton row={row} />
         </div>
         {row.laneLabels?.map(
           (text, lane) =>
@@ -412,6 +449,7 @@ function RowLabel({ row }) {
           </span>
         </span>
       </Main>
+      <FitButton row={row} />
     </div>
   );
 }

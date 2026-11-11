@@ -216,6 +216,37 @@
   background: var(--divider);
 }
 
+/* Button that fits the date range to the project's whole timeline */
+.gantt-fit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.gantt-fit:hover {
+  background: var(--divider);
+  color: var(--ink);
+}
+
+/* The range is currently fitted to this project */
+.gantt-fit.is-active {
+  background: var(--ink);
+  color: var(--panel);
+}
+
+.gantt-fit:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 /* Staircase view: labels are positioned per lane to line up with their bars */
 .gantt-label.is-stacked {
   display: block;
