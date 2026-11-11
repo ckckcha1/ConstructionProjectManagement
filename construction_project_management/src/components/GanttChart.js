@@ -72,13 +72,18 @@ function packLanes(bars) {
   return lanes;
 }
 
-function layoutBars(bars, timeline) {
-  // What-if preview bars always go in lanes below the saved bars, so the conflict
-  // banner drawn above a saved bar never covers a preview bar
-  const lanes = [
-    ...packLanes(bars.filter((bar) => !bar.isPreview)),
-    ...packLanes(bars.filter((bar) => bar.isPreview)),
-  ];
+// layout 'stacked' (the staircase view): every bar gets its own lane, in the order given.
+// Otherwise bars are packed into as few lanes as possible.
+function layoutBars(bars, timeline, layout) {
+  const lanes =
+    layout === 'stacked'
+      ? bars.map((bar) => [bar])
+      : [
+          // What-if preview bars always go in lanes below the saved bars, so the conflict
+          // banner drawn above a saved bar never covers a preview bar
+          ...packLanes(bars.filter((bar) => !bar.isPreview)),
+          ...packLanes(bars.filter((bar) => bar.isPreview)),
+        ];
 
   const placed = [];
   lanes.forEach((laneBars, lane) => {
@@ -174,7 +179,7 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
     () =>
       rows.map((row) => {
         if (row.type === 'group') return row;
-        const { bars, laneCount } = layoutBars(row.bars, timeline);
+        const { bars, laneCount } = layoutBars(row.bars, timeline, row.layout);
         const contentHeight = laneCount * (BAR_HEIGHT + LANE_GAP) - LANE_GAP;
         const height = Math.max(MIN_ROW_HEIGHT, contentHeight + 2 * ROW_PADDING_Y);
         const top = (height - contentHeight) / 2;
@@ -184,6 +189,8 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
         return {
           ...row,
           height,
+          // Top of each lane, so a stacked row's labels line up with their bars
+          laneTops: d3.range(laneCount).map((lane) => top + lane * (BAR_HEIGHT + LANE_GAP)),
           bars: bars.map((bar) => ({
             ...bar,
             top: top + bar.lane * (BAR_HEIGHT + LANE_GAP),
@@ -281,6 +288,7 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
                     const showLabel = textWidth(bar.label) + 2 * BAR_LABEL_PADDING <= bar.width;
                     const className = [
                       'gantt-bar',
+                      bar.isSummary && 'is-summary',
                       bar.isPreview && 'is-preview',
                       bar.previewStatus && `is-preview-${bar.previewStatus}`,
                       bar.overlapsPreview && 'overlaps-preview',
@@ -338,26 +346,73 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
   );
 }
 
-function RowLabel({ row }) {
-  const content = (
-    <>
-      {row.swatch && <span className="gantt-swatch" style={{ background: row.swatch }} aria-hidden="true" />}
-      <span className="gantt-label-text">
-        <span className="gantt-label-title" title={row.title}>
-          {row.title}
-        </span>
-        <span className="gantt-label-meta" title={row.meta}>
-          {row.meta}
-        </span>
-      </span>
-    </>
-  );
-  return row.onClick ? (
-    <button type="button" className="gantt-label is-clickable" onClick={row.onClick}>
-      {content}
+// Arrow that switches a project row between one line and the staircase view
+function ExpandToggle({ row }) {
+  if (!row.onToggleExpand) return null;
+  return (
+    <button
+      type="button"
+      className="gantt-expand"
+      aria-expanded={row.expanded}
+      aria-label={`${row.expanded ? 'Collapse' : 'Expand'} the phases of ${row.title}`}
+      title={row.expanded ? 'Show on one line' : 'Show each phase on its own line'}
+      onClick={row.onToggleExpand}
+    >
+      <span className={`gantt-chevron${row.expanded ? '' : ' is-collapsed'}`} aria-hidden="true" />
     </button>
-  ) : (
-    <div className="gantt-label">{content}</div>
+  );
+}
+
+function RowLabel({ row }) {
+  const swatch = row.swatch && (
+    <span className="gantt-swatch" style={{ background: row.swatch }} aria-hidden="true" />
+  );
+  // The clickable part (selects the project) is separate from the arrow, since buttons can't nest
+  const Main = row.onClick ? 'button' : 'div';
+  const mainProps = row.onClick ? { type: 'button', onClick: row.onClick } : {};
+  const mainClass = `gantt-label-main${row.onClick ? ' is-clickable' : ''}`;
+
+  if (row.layout === 'stacked') {
+    // Staircase view: the title sits beside the first lane (the summary bar)
+    // and each phase's name beside its own lane
+    return (
+      <div className="gantt-label is-stacked">
+        <div className="gantt-lane-label is-title" style={{ top: row.laneTops[0] }}>
+          <ExpandToggle row={row} />
+          <Main className={mainClass} {...mainProps}>
+            {swatch}
+            <span className="gantt-label-title" title={row.title}>
+              {row.title}
+            </span>
+          </Main>
+        </div>
+        {row.laneLabels?.map(
+          (text, lane) =>
+            text && (
+              <span key={lane} className="gantt-lane-label" style={{ top: row.laneTops[lane] }} title={text}>
+                {text}
+              </span>
+            )
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="gantt-label">
+      <ExpandToggle row={row} />
+      <Main className={mainClass} {...mainProps}>
+        {swatch}
+        <span className="gantt-label-text">
+          <span className="gantt-label-title" title={row.title}>
+            {row.title}
+          </span>
+          <span className="gantt-label-meta" title={row.meta}>
+            {row.meta}
+          </span>
+        </span>
+      </Main>
+    </div>
   );
 }
 
