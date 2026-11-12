@@ -82,6 +82,14 @@
   margin-bottom: 8px;
 }
 
+/* "Date range" title with the Reset to today button on the right */
+.filters-dates-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .date-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -161,28 +161,115 @@
   flex: 0 0 var(--label-width);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   padding: 0 12px;
-  border: none;
   border-right: 1px solid var(--border);
   background: var(--panel);
+}
+
+/* Swatch + title + meta; a button when clicking it selects the project */
+.gantt-label-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
   font: inherit;
   text-align: left;
   color: inherit;
 }
 
-.gantt-label.is-clickable {
+.gantt-label-main.is-clickable {
   cursor: pointer;
 }
 
-.gantt-label.is-clickable:hover .gantt-label-title {
+.gantt-label-main.is-clickable:hover .gantt-label-title {
   text-decoration: underline;
 }
 
-.gantt-label:focus-visible {
+.gantt-label-main:focus-visible,
+.gantt-expand:focus-visible {
   outline: 2px solid var(--ink);
-  outline-offset: -2px;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Arrow that switches a project between one line and the staircase view */
+.gantt-expand {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.gantt-expand:hover {
+  background: var(--divider);
+}
+
+/* Button that fits the date range to the project's whole timeline */
+.gantt-fit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.gantt-fit:hover {
+  background: var(--divider);
+  color: var(--ink);
+}
+
+/* The range is currently fitted to this project */
+.gantt-fit.is-active {
+  background: var(--ink);
+  color: var(--panel);
+}
+
+.gantt-fit:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Staircase view: labels are positioned per lane to line up with their bars */
+.gantt-label.is-stacked {
+  display: block;
+}
+
+.gantt-lane-label {
+  position: absolute;
+  left: 48px; /* lines phase names up under the project title */
+  right: 12px;
+  height: 20px; /* BAR_HEIGHT in GanttChart.js */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  line-height: 20px;
+  color: var(--sub);
+}
+
+.gantt-lane-label.is-title {
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .gantt-row.is-selected .gantt-label {
@@ -250,6 +337,11 @@
   position: sticky;
   left: var(--label-width);
   padding: 0 6px;
+}
+
+/* Staircase view's first line: the whole project's duration, a lighter tint of its color */
+.gantt-bar.is-summary {
+  font-weight: 500;
 }
 
 /* A square end means the bar continues past the edge of the date range */
@@ -414,6 +506,12 @@
 /* What-if project phases on the project timeline: purple (variables in App.css) */
 .gantt-bar.is-preview.is-preview-phase {
   background: var(--what-if-fill) !important;
+  border-color: var(--what-if-stroke) !important;
+}
+
+/* What-if project's duration bar in the staircase view: a lighter purple than its phases */
+.gantt-bar.is-preview.is-preview-summary {
+  background: #ede9fe !important;
   border-color: var(--what-if-stroke) !important;
 }
 
