@@ -328,6 +328,24 @@ for (const group of RESOURCE_GROUPS) {
       (hasSavedAssignments || hasPreviewAssignments)
     );
   });
+
+    // Show resources selected in What-if first, then sort the rest alphabetically.
+    resources.sort((a, b) => {
+      const aSelected = previewAssignmentsByResource.has(
+        `${PREVIEW_RESOURCE_TYPES[group.type]}:${a.id}`
+      );
+      const bSelected = previewAssignmentsByResource.has(
+        `${PREVIEW_RESOURCE_TYPES[group.type]}:${b.id}`
+      );
+
+      if (aSelected !== bSelected) {
+        return aSelected ? -1 : 1;
+      }
+
+      return group.label(a).localeCompare(group.label(b));
+    });
+
+
     if (resources.length === 0) continue;
 
     const collapsed = collapsedGroups.has(group.type);
