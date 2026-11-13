@@ -77,6 +77,32 @@
   border-color: #182033;
 }
 
+/* Warehouse marker: yellow star (SVG) */
+.warehouse-pin-wrapper {
+  background: none;
+  border: none;
+}
+
+.warehouse-pin-wrapper:focus-visible {
+  outline: 2px solid #4e79a7;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.warehouse-pin {
+  display: block;
+  width: 28px;
+  height: 28px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+  transition: transform 0.15s ease;
+}
+
+.warehouse-pin-wrapper:hover .warehouse-pin,
+.warehouse-pin-wrapper:focus-visible .warehouse-pin {
+  transform: scale(1.15);
+}
+
 /* Project labels (Leaflet tooltips, restyled as plain text with a halo) */
 .leaflet-tooltip.project-label {
   padding: 0;
@@ -94,7 +120,54 @@
   pointer-events: none;
 }
 
-.leaflet-tooltip-right.project-label::before {
+/* The label opens to the right or to the left (direction: 'auto'),
+   so hide Leaflet's arrow on both sides */
+.leaflet-tooltip-right.project-label::before,
+.leaflet-tooltip-left.project-label::before {
+  display: none;
+}
+
+/* Expanded label on marker hover (projects and warehouse).
+   Uses the full selector so it beats .leaflet-tooltip.project-label above. */
+.leaflet-tooltip.project-label.project-label-expanded {
+  z-index: 1000;
+  padding: 6px 8px;
+  background: #ffffff;
+  border: 1px solid #dce4f2;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  text-shadow: none;
+  font-weight: 400;
+}
+
+.project-label-detail {
+  width: max-content;
+  max-width: 180px;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.project-label-detail strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #182033;
+}
+
+.project-label-detail > div {
+  font-size: 10px;
+  color: #626b7c;
+}
+
+/* Drive time line stands out */
+.project-label-detail .detail-drive {
+  margin-top: 2px;
+  font-weight: 700;
+  color: #182033;
+}
+
+/* No drive time available: don't leave an empty line */
+.project-label-detail > div:empty {
   display: none;
 }
 
@@ -151,6 +224,16 @@
   border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 60% 60% 60% 0;
   transform: rotate(-45deg);
+}
+
+/* Warehouse star in the list (same star as the map marker) */
+.site-star {
+  display: block;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
 }
 
 /* Project name and location */
