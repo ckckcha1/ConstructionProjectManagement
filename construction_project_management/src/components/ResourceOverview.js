@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import './ResourceOverview.css';
 import GanttChart, { LABEL_WIDTH, buildTimeline } from './GanttChart';
@@ -66,7 +66,7 @@ const phaseDates = (phase) =>
 
 // Rows for both charts, from the projects and resources checked in the filter panel.
 // Bars are the phases that overlap the date range; a resource gets one bar per phase it's assigned to.
-function buildRows({ data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, onSelectProject, onToggleGroup, selectedProjectId }) {
+function buildRows({ data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, expandOverrides, onSelectProject, onToggleGroup, onToggleProjectExpand, onFitToRange, selectedProjectId }) {
   const projects = inRange.projects.filter((p) => !excludedIds.projects.has(p.id));
   const projectIds = new Set(projects.map((p) => p.id));
   const colorOf = (projectId) => data.projectColorById.get(projectId);
@@ -129,71 +129,171 @@ for (const assignments of allAssignmentsByResource.values()) {
   );
   const resourcesPerPhase = d3.rollup(data.assignments, (v) => v.length, (a) => a.phaseId);
 
-  const projectRows = projects.map((project) => ({
-    type: 'item',
-    key: project.id,
-    title: `${project.id} · ${project.name}`,
-    meta: `${formatShort(project.startDate)} – ${formatShort(project.endDate)} · ${plural(
-      resourcesPerProject.get(project.id) ?? 0,
-      'resource'
-    )}`,
-    swatch: colorOf(project.id),
-    selected: project.id === selectedProjectId,
-    onClick: () => onSelectProject(project.id),
-    bars: (phasesByProject.get(project.id) ?? []).map((phase) => ({
-      key: phase.id,
-      start: phase.startDate,
-      end: phase.endDate,
-      color: colorOf(project.id),
-      label: `Phase ${phase.phaseNumber}`,
-      tooltip: {
-        title: `${project.name} · Phase ${phase.phaseNumber}`,
-        lines: [phaseDates(phase), plural(resourcesPerPhase.get(phase.id) ?? 0, 'resource')],
-      },
-      onClick: () => onSelectProject(project.id),
-    })),
-  }));
+  // A project row is shown either on one line (all phases packed together) or in the
+  // staircase view: a summary bar for the whole project, then each phase on its own line.
+  // By default only a lone project, or the what-if project, uses the staircase view;
+  // the arrow on each row overrides that (expandOverrides).
+  const isExpanded = (key, byDefault) =>
+    expandOverrides.has(key) ? expandOverrides.get(key) : byDefault;
 
-    // Add the temporary what-if project to the project timeline.
-  if (whatIfPreview) {
-    projectRows.push({
+  // phases: [{ bar, label }] in start order; summaryBar is null when there's nothing to span
+  const projectRow = ({ key, expanded, summaryBar, phases: rowPhases, ...rest }) => {
+    const base = {
       type: 'item',
-      key: 'what-if-preview',
-      title: whatIfPreview.name || 'New project',
-      meta: whatIfPreview.place || 'Proposed project',
-      swatch: '#7c3aed', // purple, matching the phase bars (--what-if-stroke in App.css)
-      selected: false,
-      bars:
-     whatIfPreview.phases
-  ?.filter((phase) => {
-    if (!phase.start || !phase.end) return false;
+      key,
+      expanded,
+      onToggleExpand: () => onToggleProjectExpand(key, expanded),
+      ...rest,
+    };
+    if (!expanded || !summaryBar) {
+      return { ...base, bars: rowPhases.map((phase) => phase.bar) };
+    }
+    return {
+      ...base,
+      layout: 'stacked',
+      bars: [summaryBar, ...rowPhases.map((phase) => phase.bar)],
+      laneLabels: [null, ...rowPhases.map((phase) => phase.label)], // lane 0 shows the title
+    };
+  };
 
-    const start = new Date(`${phase.start}T00:00:00`);
-    const end = new Date(`${phase.end}T00:00:00`);
+  const dateRangeText = (start, end) => `${formatShort(start)} – ${formatShort(end)}`;
+  const tint = (color) => d3.color(d3.interpolateRgb(color, '#ffffff')(0.55)).formatHex();
+  const byStart = (a, b) => a.startDate - b.startDate || a.phaseNumber - b.phaseNumber;
 
-    return (
-      !Number.isNaN(start.getTime()) &&
-      !Number.isNaN(end.getTime()) &&
-      start <= end
-    );
-  })
-  .map((phase, index) => ({
-    key: `what-if-phase-${phase.id ?? index}`,
-    start: new Date(`${phase.start}T00:00:00`),
-    end: new Date(`${phase.end}T00:00:00`),
-    color: '#c4b5fd', // --what-if-fill in App.css
-    isPreview: true,
-    previewStatus: 'phase',
-    label: phase.name || `Phase ${index + 1}`,
-    tooltip: {
-      title: `${whatIfPreview.name || 'New project'} — ${phase.name || `Phase ${index + 1}`}`,
-      lines: [
-        whatIfPreview.place || 'Proposed project',
-        `${phase.start} – ${phase.end}`,
-      ],
-    },
-  })) ?? [],
+  const singleProjectView = projects.length === 1 && !whatIfPreview;
+
+  // Fit button on a project row: sets the date range to the project's whole timeline.
+  // fitActive marks the row whose timeline the range is currently fitted to.
+  const fitProps = (start, end, projectId) => {
+    if (!start || !end || !onFitToRange) return {};
+    return {
+      onFit: () => onFitToRange(start, end, projectId),
+      fitTitle: `Fit the timeline to this project (${formatDate(start)} – ${formatDate(end)})`,
+      fitActive:
+        Boolean(dateRange.fit) &&
+        +dateRange.start === +d3.timeDay.floor(start) &&
+        +dateRange.end === +d3.timeDay.floor(end),
+    };
+  };
+
+  // A project's whole timeline: earliest to latest date of the project and all its
+  // phases (not just the phases in the current range)
+  const allPhasesByProject = d3.group(data.phases, (ph) => ph.projectId);
+  const projectSpan = (project) => {
+    const dates = [project, ...(allPhasesByProject.get(project.id) ?? [])]
+      .flatMap((d) => [d.startDate, d.endDate])
+      .filter(Boolean);
+    return [d3.min(dates), d3.max(dates)];
+  };
+
+  const projectRows = projects.map((project) => {
+    const expanded = isExpanded(project.id, singleProjectView);
+    const resourceCount = plural(resourcesPerProject.get(project.id) ?? 0, 'resource');
+    const projectPhases = [...(phasesByProject.get(project.id) ?? [])].sort(byStart);
+
+    return projectRow({
+      key: project.id,
+      expanded,
+      title: `${project.id} · ${project.name}`,
+      meta: `${dateRangeText(project.startDate, project.endDate)} · ${resourceCount}`,
+      swatch: colorOf(project.id),
+      selected: project.id === selectedProjectId,
+      onClick: () => onSelectProject(project.id),
+      ...fitProps(...projectSpan(project), project.id),
+      summaryBar: {
+        key: `${project.id}-summary`,
+        start: project.startDate,
+        end: project.endDate,
+        color: tint(colorOf(project.id)),
+        isSummary: true,
+        label: dateRangeText(project.startDate, project.endDate),
+        tooltip: {
+          title: `${project.id} · ${project.name}`,
+          lines: [phaseDates(project), `${plural(projectPhases.length, 'phase')} in range · ${resourceCount}`],
+        },
+        onClick: () => onSelectProject(project.id),
+      },
+      phases: projectPhases.map((phase) => ({
+        label: `Phase ${phase.phaseNumber}`,
+        bar: {
+          key: phase.id,
+          start: phase.startDate,
+          end: phase.endDate,
+          color: colorOf(project.id),
+          // On its own line the phase name is in the label column, so the bar shows its dates
+          label: expanded ? dateRangeText(phase.startDate, phase.endDate) : `Phase ${phase.phaseNumber}`,
+          tooltip: {
+            title: `${project.name} · Phase ${phase.phaseNumber}`,
+            lines: [phaseDates(phase), plural(resourcesPerPhase.get(phase.id) ?? 0, 'resource')],
+          },
+          onClick: () => onSelectProject(project.id),
+        },
+      })),
+    });
   });
+
+  // Add the temporary what-if project to the project timeline (staircase view by default).
+  if (whatIfPreview) {
+    const whatIfName = whatIfPreview.name || 'New project';
+    const expanded = isExpanded('what-if-preview', true);
+
+    const whatIfPhases = (whatIfPreview.phases ?? [])
+      .map((phase, index) => ({
+        phase,
+        name: phase.name || `Phase ${index + 1}`,
+        startDate: previewDate(phase.start),
+        endDate: previewDate(phase.end),
+      }))
+      .filter((p) => p.startDate && p.endDate && p.startDate <= p.endDate)
+      .sort((a, b) => a.startDate - b.startDate);
+
+    // The duration bar uses the project dates if entered, otherwise the span of its phases
+    const spanStart = previewDate(whatIfPreview.projectStart) ?? d3.min(whatIfPhases, (p) => p.startDate);
+    const spanEnd = previewDate(whatIfPreview.projectEnd) ?? d3.max(whatIfPhases, (p) => p.endDate);
+    const hasSpan = spanStart && spanEnd && spanStart <= spanEnd;
+
+    projectRows.push(
+      projectRow({
+        key: 'what-if-preview',
+        expanded,
+        title: whatIfName,
+        meta: whatIfPreview.place || 'Proposed project',
+        swatch: '#7c3aed', // purple, matching the phase bars (--what-if-stroke in App.css)
+        selected: false,
+        ...(hasSpan ? fitProps(spanStart, spanEnd, null) : {}),
+        summaryBar: hasSpan
+          ? {
+              key: 'what-if-summary',
+              start: spanStart,
+              end: spanEnd,
+              color: '#ede9fe', // GanttChart.css .is-preview-summary
+              isPreview: true,
+              previewStatus: 'summary',
+              label: dateRangeText(spanStart, spanEnd),
+              tooltip: {
+                title: whatIfName,
+                lines: [whatIfPreview.place || 'Proposed project', `${formatDate(spanStart)} – ${formatDate(spanEnd)}`],
+              },
+            }
+          : null,
+        phases: whatIfPhases.map((p, index) => ({
+          label: p.name,
+          bar: {
+            key: `what-if-phase-${p.phase.id ?? index}`,
+            start: p.startDate,
+            end: p.endDate,
+            color: '#c4b5fd', // --what-if-fill in App.css
+            isPreview: true,
+            previewStatus: 'phase',
+            label: expanded ? dateRangeText(p.startDate, p.endDate) : p.name,
+            tooltip: {
+              title: `${whatIfName} — ${p.name}`,
+              lines: [whatIfPreview.place || 'Proposed project', `${p.phase.start} – ${p.phase.end}`],
+            },
+          },
+        })),
+      })
+    );
   }
 
   const assignmentsByResource = d3.group(
@@ -332,11 +432,30 @@ function ResourceOverview({
   error,
   selectedProjectId,
   onSelectProject,
+  onFitToRange,
 }) {
   const projectsScrollRef = useRef(null);
   const resourcesScrollRef = useRef(null);
   const [availableWidth, setAvailableWidth] = useState(0);
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  // Project rows switched with their arrow: key -> expanded (staircase) or not.
+  // Rows without an entry use the default (see buildRows).
+  const [expandOverrides, setExpandOverrides] = useState(() => new Map());
+
+  const toggleProjectExpand = useCallback((key, expanded) => {
+    setExpandOverrides((prev) => new Map(prev).set(key, !expanded));
+  }, []);
+
+  // Each new what-if starts in the staircase view, even if the last one was collapsed
+  useEffect(() => {
+    if (whatIfPreview) return;
+    setExpandOverrides((prev) => {
+      if (!prev.has('what-if-preview')) return prev;
+      const next = new Map(prev);
+      next.delete('what-if-preview');
+      return next;
+    });
+  }, [whatIfPreview]);
 
   // Days stretch to fill the chart width, so track it as the window resizes
   useLayoutEffect(() => {
@@ -366,7 +485,7 @@ function ResourceOverview({
   }, []);
 
   const timeline = useMemo(
-    () => buildTimeline(dateRange.start, dateRange.end, availableWidth),
+    () => buildTimeline(dateRange.start, dateRange.end, availableWidth, { fit: dateRange.fit }),
     [dateRange, availableWidth]
   );
 
@@ -393,12 +512,15 @@ function ResourceOverview({
             excludedIds,
             dateRange,
             collapsedGroups,
+            expandOverrides,
             onSelectProject,
             onToggleGroup: toggleGroup,
+            onToggleProjectExpand: toggleProjectExpand,
+            onFitToRange,
             selectedProjectId,
           })
         : { projectRows: [], resourceRows: [] },
-    [data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, onSelectProject, toggleGroup, selectedProjectId]
+    [data, whatIfPreview, inRange, excludedIds, dateRange, collapsedGroups, expandOverrides, onSelectProject, toggleGroup, toggleProjectExpand, onFitToRange, selectedProjectId]
   );
 
   let projectsEmpty = 'No projects selected in this period.';
