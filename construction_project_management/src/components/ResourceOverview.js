@@ -157,7 +157,9 @@ for (const assignments of allAssignmentsByResource.values()) {
   };
 
   const dateRangeText = (start, end) => `${formatShort(start)} – ${formatShort(end)}`;
-  const tint = (color) => d3.color(d3.interpolateRgb(color, '#ffffff')(0.55)).formatHex();
+  // Duration bar color: the project color muted toward slate, so it reads as a summary
+  // of the phases below it and stays dark enough for the white bar text
+  const muted = (color) => d3.color(d3.interpolateRgb(color, '#334155')(0.4)).formatHex();
   const byStart = (a, b) => a.startDate - b.startDate || a.phaseNumber - b.phaseNumber;
 
   const singleProjectView = projects.length === 1 && !whatIfPreview;
@@ -204,7 +206,7 @@ for (const assignments of allAssignmentsByResource.values()) {
         key: `${project.id}-summary`,
         start: project.startDate,
         end: project.endDate,
-        color: tint(colorOf(project.id)),
+        color: muted(colorOf(project.id)),
         isSummary: true,
         label: dateRangeText(project.startDate, project.endDate),
         tooltip: {

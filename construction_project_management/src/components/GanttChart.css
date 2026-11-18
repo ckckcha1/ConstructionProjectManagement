@@ -21,11 +21,14 @@
   min-width: 100%;
 }
 
-/* ---- Header (sticky top) ---- */
+/* ---- Header (sticky top) ----
+   Layer order, bottom to top: bars (1, conflict bars 3), today line (2),
+   label column and group rows (5), header (6), header corner (7), tooltip (100).
+   The label column must stay above every bar layer, or bars scroll over the names. */
 .gantt-header {
   position: sticky;
   top: 0;
-  z-index: 4;
+  z-index: 6;
   display: flex;
   background: #F8F9FB;
   border-bottom: 1px solid var(--border);
@@ -34,7 +37,7 @@
 .gantt-corner {
   position: sticky;
   left: 0;
-  z-index: 5;
+  z-index: 7;
   flex: 0 0 var(--label-width);
   display: flex;
   align-items: center;
@@ -157,7 +160,7 @@
 .gantt-label {
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 5; /* above conflict bars (3), see the layer order at the top */
   flex: 0 0 var(--label-width);
   display: flex;
   align-items: center;
@@ -327,6 +330,9 @@
   font: inherit;
   font-size: 11px;
   font-weight: 600;
+  /* One text color for every bar label; the project colors (data.js) and what-if fills
+     are all dark enough for white text to stay readable (4.5:1 contrast or better) */
+  color: #FFFFFF;
   white-space: nowrap;
   overflow: clip; /* clip (not hidden) so the label below can stick */
   cursor: pointer;
@@ -368,7 +374,7 @@
 /* ---- Group rows (People / Tools / Materials) ---- */
 .gantt-group {
   position: relative;
-  z-index: 3;
+  z-index: 5; /* above conflict banners, which reach up into the row above */
   height: 30px;
   background: #F4F6F9;
   border-bottom: 1px solid var(--divider);
@@ -483,12 +489,14 @@
   z-index: 4;
 }
 
-/* What-if proposed assignment bars */
+/* What-if proposed assignment bars. Their light fills keep dark text
+   (the white bar text is for the normal project bars). */
 .gantt-bar.is-preview {
   background: #c4b5fd !important;
   border: 2px dashed #7c3aed !important;
   box-sizing: border-box;
   opacity: 0.9;
+  color: var(--ink);
 }
 
 /* What-if resource bars take the status color from Add project's conflict check

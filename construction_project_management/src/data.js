@@ -19,8 +19,9 @@ const byId = (rows) => new Map(rows.map((row) => [row.id, row]));
 // Project colors are generated, one unique color per project, so new projects never repeat a color.
 // Hues are spread evenly around the HCL color wheel (perceptually even, unlike HSL).
 // Lightness cycles through these levels, so hues that sit close together still look different.
-const COLOR_LIGHTNESS = [52, 68, 38];
-const COLOR_CHROMA = 55;
+// All levels are dark enough for the white bar text in the Gantt charts (4.5:1 contrast or better).
+const COLOR_LIGHTNESS = [46, 38, 42];
+const COLOR_CHROMA = 60;
 const COLOR_HUE_OFFSET = 20; // starts the wheel at a red-orange
 
 function generateColors(count) {

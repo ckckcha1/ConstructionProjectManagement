@@ -22,7 +22,6 @@ const BAR_GAP = 2; // surface gap between bars that touch
 const BAR_LABEL_PADDING = 6; // space on each side of the text inside a bar
 const MIN_WEEK_LABEL_WIDTH = 40;
 const TOOLTIP_WIDTH = 240;
-const DARK_TEXT = '#0F172A';
 
 const formatMonth = d3.timeFormat('%B %Y');
 const formatMonthShort = d3.timeFormat('%b');
@@ -125,26 +124,6 @@ function textWidth(text) {
   return measureContext ? measureContext.measureText(text).width : Infinity;
 }
 
-const relativeLuminance = (color) => {
-  const channel = (v) => {
-    const c = v / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  const { r, g, b } = d3.rgb(color);
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-};
-
-// White or dark text, whichever has more contrast on the bar color
-const labelColors = new Map();
-function labelColorOn(color) {
-  if (!labelColors.has(color)) {
-    const fill = relativeLuminance(color);
-    const onWhite = 1.05 / (fill + 0.05);
-    const onDark = (fill + 0.05) / (relativeLuminance(DARK_TEXT) + 0.05);
-    labelColors.set(color, onWhite >= onDark ? '#FFFFFF' : DARK_TEXT);
-  }
-  return labelColors.get(color);
-}
 
 function Tooltip({ tooltip }) {
   const { bar, x, y } = tooltip;
@@ -293,7 +272,6 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
                 <RowLabel row={row} />
                 <div className="gantt-track" style={{ width: timeline.width }}>
                   {row.bars.map((bar) => {
-                    const textColor = labelColorOn(bar.color);
                     const showLabel = textWidth(bar.label) + 2 * BAR_LABEL_PADDING <= bar.width;
                     const className = [
                       'gantt-bar',
@@ -318,7 +296,6 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
                           width: bar.width,
                           height: BAR_HEIGHT,
                           background: bar.color,
-                          color: textColor,
                         }}
                         aria-label={`${bar.tooltip.title}: ${bar.tooltip.lines.join(', ')}`}
                         onClick={bar.onClick}
