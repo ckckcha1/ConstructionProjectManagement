@@ -6,7 +6,7 @@ import ResourceOverview from './components/ResourceOverview';
 import ProjectSites from './components/ProjectSites';
 import ProjectDetails from './components/ProjectDetails';
 import AddProject from './components/AddProject';
-import { TODAY, getDefaultDateRange, getDefaultProject, getPeriodSummary, getResourcesInRange, isProjectVisible, loadData,} from './data';
+import { TODAY, fromInputValue, getDefaultDateRange, getDefaultProject, getPeriodSummary, getResourcesInRange, isProjectVisible, loadData, startOfDay,} from './data';
 
 // Stores the UNCHECKED items, so anything new that appears when the range
 // changes starts out checked.
@@ -137,6 +137,37 @@ function App() {
     });
   }, []);
 
+  // Fit the date range to one project's whole timeline (the fit button on a project row).
+  // fit: true lets the Gantt charts shrink days below their usual minimum width so the
+  // whole range shows without scrolling; any other range change drops it.
+  const handleFitToRange = useCallback((start, end, projectId) => {
+    setDateRange({ start: startOfDay(start), end: startOfDay(end), fit: true });
+    if (projectId) setSelectedProjectId(projectId);
+  }, []);
+
+  // While a what-if project is being built, the charts show the start and end dates
+  // entered for it (fitted, so the whole new project shows without scrolling).
+  // Runs only when those dates change, so the user can still change the range by hand.
+  const whatIfStart = whatIfPreview?.projectStart;
+  const whatIfEnd = whatIfPreview?.projectEnd;
+  useEffect(() => {
+    const start = fromInputValue(whatIfStart);
+    const end = fromInputValue(whatIfEnd);
+    if (!start || !end || start > end) return;
+    setDateRange({ start, end, fit: true });
+  }, [whatIfStart, whatIfEnd]);
+
+  // "Reset to today" in the filter panel: only the date range goes back to the starting view
+  const handleResetRange = useCallback(() => setDateRange(getDefaultDateRange(TODAY)), []);
+  const isDefaultRange = useMemo(() => {
+    const defaults = getDefaultDateRange(TODAY);
+    return (
+      !dateRange.fit &&
+      +dateRange.start === +defaults.start &&
+      +dateRange.end === +defaults.end
+    );
+  }, [dateRange]);
+
   const handleReset = useCallback(() => {
     setDateRange(getDefaultDateRange(TODAY));
     setSearchQuery('');
@@ -151,6 +182,8 @@ function App() {
         <Filters
           dateRange={dateRange}
           onDateRangeChange={setDateRange}
+          onResetRange={handleResetRange}
+          isDefaultRange={isDefaultRange}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           inRange={inRange}
@@ -176,6 +209,7 @@ function App() {
             error={error}
             selectedProjectId={displayedProject?.id ?? null}
             onSelectProject={setSelectedProjectId}
+            onFitToRange={handleFitToRange}
           />
           <ProjectSites
             data={data}

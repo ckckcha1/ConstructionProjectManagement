@@ -234,7 +234,8 @@ for (const assignments of allAssignmentsByResource.values()) {
     });
   });
 
-  // Add the temporary what-if project to the project timeline (staircase view by default).
+  // Add the temporary what-if project to the top of the project timeline, so the project
+  // being built is the first thing in view (staircase view by default).
   if (whatIfPreview) {
     const whatIfName = whatIfPreview.name || 'New project';
     const expanded = isExpanded('what-if-preview', true);
@@ -254,7 +255,7 @@ for (const assignments of allAssignmentsByResource.values()) {
     const spanEnd = previewDate(whatIfPreview.projectEnd) ?? d3.max(whatIfPhases, (p) => p.endDate);
     const hasSpan = spanStart && spanEnd && spanStart <= spanEnd;
 
-    projectRows.push(
+    projectRows.unshift(
       projectRow({
         key: 'what-if-preview',
         expanded,
