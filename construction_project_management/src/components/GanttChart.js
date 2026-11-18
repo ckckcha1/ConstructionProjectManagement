@@ -11,9 +11,9 @@ export const LABEL_WIDTH = 200;
 // Days never get narrower than this, longer ranges scroll horizontally instead
 const MIN_DAY_WIDTH = 8;
 const BAR_HEIGHT = 20;
-const LANE_GAP = 4;
+const LANE_GAP = 20;
 const MIN_ROW_HEIGHT = 40;
-const ROW_PADDING_Y = 8;
+const ROW_PADDING_Y = 18;
 const BAR_GAP = 2; // surface gap between bars that touch
 const BAR_LABEL_PADDING = 6; // space on each side of the text inside a bar
 const MIN_WEEK_LABEL_WIDTH = 40;
@@ -315,7 +315,7 @@ function GanttChart({ timeline, today, labelHeader, rows, focusPreview, emptyMes
                       >
                         {bar.isConflict && (
                             <span className="gantt-conflict-banner">
-                                ⚠ Phase 1 — Conflict
+                                ⚠ Conflict
                             </span>
                         )}
                         {showLabel && <span className="gantt-bar-label">{bar.label}</span>}
