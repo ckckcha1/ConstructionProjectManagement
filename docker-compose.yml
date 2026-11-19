@@ -1,0 +1,47 @@
+# Runs the whole dashboard: PostgreSQL database, Express API, and nginx serving React.
+# Start:          docker compose up -d --build
+# Load the data:  docker compose run --rm server npm run db:setup   (first time only, erases tables)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PGUSER:-postgres}
+      POSTGRES_PASSWORD: ${PGPASSWORD:?Set PGPASSWORD in the .env file next to docker-compose.yml}
+      POSTGRES_DB: ${PGDATABASE:-construction_pm}
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # keeps the database when containers restart
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No "ports:" on purpose: the database is only reachable by the server container, not the internet.
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    environment:
+      PGHOST: db                       # the "db" service name above, not localhost
+      PGPORT: 5432
+      PGUSER: ${PGUSER:-postgres}
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE:-construction_pm}
+      PORT: 5000
+    volumes:
+      - ./data:/data:ro                # db/setup.js reads the CSVs from /data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./construction_project_management
+    restart: unless-stopped
+    ports:
+      - "80:80"                        # http://<server-public-ip>
+    depends_on:
+      - server
+
+volumes:
+  pgdata:

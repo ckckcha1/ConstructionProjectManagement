@@ -1,0 +1,2 @@
+# Docker Compose secrets (database password)
+.env
